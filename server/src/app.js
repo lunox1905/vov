@@ -208,6 +208,7 @@ peers.on('connection', async socket => {
       listenInfo: {
         protocol: "udp",
         ip: '0.0.0.0',
+        announcedIp: HOST_IP,
       },
       rtcpMux: true,
       comedia: true,
