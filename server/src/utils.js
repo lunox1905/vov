@@ -1,6 +1,7 @@
-const { Readable } = require('stream');
+import { Readable } from 'stream';
 
-module.exports.convertStringToStream = (stringToConvert) => {
+// Converts a string (SDP) to a stream so it can be piped into the FFmpeg process
+export const convertStringToStream = (stringToConvert) => {
   const stream = new Readable();
   stream._read = () => {};
   stream.push(stringToConvert);
@@ -9,7 +10,9 @@ module.exports.convertStringToStream = (stringToConvert) => {
   return stream;
 };
 
-module.exports.getCodecInfoFromRtpParameters = (kind, rtpParameters) => {
+// Gets codec information from rtpParameters
+export const getCodecInfoFromRtpParameters = (kind, rtpParameters) => {
+  // console.log("rptPram__UTIL::", rtpParameters)
   return {
     payloadType: rtpParameters.codecs[0].payloadType,
     codecName: rtpParameters.codecs[0].mimeType.replace(`${kind}/`, ''),

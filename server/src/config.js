@@ -1,8 +1,8 @@
 // Config file for mediasoup elements
 
-const os = require('os');
-const HOST_IP = process.env.HOST_IP;
-module.exports = Object.freeze({
+import os from 'os';
+
+export default Object.freeze({
   numWorkers: Object.keys(os.cpus()).length,
   worker: {
     logLevel: 'debug',
@@ -53,14 +53,14 @@ module.exports = Object.freeze({
     ]
   },
   webRtcTransport: {
-    listenIps: [ { ip: '0.0.0.0', announcedIp: HOST_IP } ], 
+    listenIps: [ { ip: '0.0.0.0', announcedIp: '127.0.0.1' } ], // TODO: Change announcedIp to your external IP or domain name
     enableUdp: true,
     enableTcp: true,
     preferUdp: true,
     maxIncomingBitrate: 1500000
   },
   plainRtpTransport: {
-    listenIp: { ip: '0.0.0.0', announcedIp: HOST_IP }, 
+    listenIp: { ip: '0.0.0.0', announcedIp: '127.0.0.1' }, // TODO: Change announcedIp to your external IP or domain name
     rtcpMux: false,
     comedia: false
   }
