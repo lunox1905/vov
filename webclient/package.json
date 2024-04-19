@@ -1,0 +1,21 @@
+{
+  "name": "webclient",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "watch": "webpack --watch --mode development"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "dotenv-webpack": "^8.1.0",
+    "lodash": "^4.17.21",
+    "mediasoup-client": "^3.7.7",
+    "socket.io-client": "^4.7.5",
+    "webpack": "^5.91.0",
+    "webpack-cli": "^5.1.4"
+  }
+}

@@ -1,7 +1,10 @@
-const { getCodecInfoFromRtpParameters } = require('./utils.js');
+import { getCodecInfoFromRtpParameters } from './utils.js';
 
-module.exports.createSdpText = (rtpParameters) => {
-
+// File to create SDP text from mediasoup RTP Parameters
+export const createSdpText = (rtpParameters) => {
+  // console.log("==========rtpParam_____SDP::::===========", rtpParameters)
+  
+  // Audio codec info
   const audioCodecInfo = getCodecInfoFromRtpParameters('audio', rtpParameters.rtpParameters);
 
   return `v=0

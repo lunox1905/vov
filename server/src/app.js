@@ -1,36 +1,40 @@
-const express = require('express');
-const https = require('httpolyglot');
-const fs = require('fs');
-const path = require('path');
-const _dirname = path.resolve();
-const cors = require("cors");
-const { Server } = require('socket.io');
-const mediasoup = require('mediasoup');
-require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+process.env.DEBUG = "mediasoup*"
+import express from 'express'
+const app = express()
 
-const app = express();
-
-const config = require('./config');
-const FFmpeg = require('./ffmpeg');
-const {
+import https from 'httpolyglot'
+import fs from 'fs'
+import path from 'path'
+const __dirname = path.resolve()
+import cors from "cors"
+import { Server } from 'socket.io'
+import mediasoup, { getSupportedRtpCapabilities } from 'mediasoup'
+import config from './config.js';
+import FFmpeg from './ffmpeg.js';
+import {
   getPort,
-} = require('./port');
+} from './port.js';
 
+app.get('/', (req, res) => {
+  res.send('Hello from mediasoup app!')
+})
 app.use(cors("*"))
-const parentDir = path.dirname(_dirname);
-console.log(parentDir)
-app.use('/play', express.static('../../client/public'))
 
+const parentDir = path.dirname(__dirname);
+app.use('/post', express.static(path.join(parentDir, 'client1/public')))
+
+// app.use('/get', express.static(path.join(__dirname, "client2/public")))
+
+app.use('/web', express.static(path.resolve('../webclient/src')))
+
+// SSL cert for HTTPS access
 const options = {
-  key: fs.readFileSync('../ssl/key.pem', 'utf-8'),
-  cert: fs.readFileSync('../ssl/cert.pem', 'utf-8')
+  key: fs.readFileSync('ssl/key.pem', 'utf-8'),
+  cert: fs.readFileSync('ssl/cert.pem', 'utf-8')
 }
 
 const httpsServer = https.createServer(options, app)
-
-const PORT = process.env.PORT;
-const HOST_IP = process.env.HOST_IP;
-const DEVICE_IP = process.env.DEVICE_IP;
+const PORT=3000
 httpsServer.listen(PORT, () => {
   console.log('listening on port: ' + PORT)
 })
@@ -43,13 +47,13 @@ const io = new Server(httpsServer, {
 })
 
 const peers = io.of('/mediasoup')
-
 let worker
 let router
 let producerTransport
 let consumerTransport
 let producer
 let consumer
+let hlsInstance
 const peer = {};
 let rtpConsumer
 
@@ -61,8 +65,8 @@ const createWorker = async () => {
   console.log(`worker pid ${worker.pid}`)
 
   worker.on('died', error => {
-    console.error('mediasoup worker has died');
-    setTimeout(() => process.exit(1), 2000);
+    console.error('mediasoup worker has died')
+    setTimeout(() => process.exit(1), 2000) // exit in 2 seconds
   })
 
   return worker
@@ -92,7 +96,10 @@ const mediaCodecs = [
   },
 ]
 
+
+
 peers.on('connection', async socket => {
+  console.log(' socket connect');
 
   socket.emit('connection-success', {
     socketId: socket.id,
@@ -108,27 +115,29 @@ peers.on('connection', async socket => {
       router = await worker.createRouter({ mediaCodecs })
       console.log(`Router ID: ${router.id}`)
     }
+   
     getRtpCapabilities(callback)
   })
 
   const getRtpCapabilities = (callback) => {
-    const rtpCapabilities = router.rtpCapabilities;
+    const rtpCapabilities = router.rtpCapabilities
+    // console.log("d======================:::", rtpCapabilities)
     callback({ rtpCapabilities })
   }
 
   socket.on('createWebRtcTransport', async ({ sender }, callback) => {
     console.log(`Is this a sender request? ${sender}`)
     if (sender) {
-      producerSocketId = socket.id
+      // producerSocketId = socket.id
       producerTransport = await createWebRtcTransport(callback)
     }
     else {
-      consumerSocketId = socket.id
       consumerTransport = await createWebRtcTransport(callback)
     }
   })
 
   socket.on('transport-connect', async ({ dtlsParameters }) => {
+    // console.log('DTLS PARAMS... ', { dtlsParameters })
     await producerTransport.connect({ dtlsParameters })
   })
 
@@ -137,11 +146,13 @@ peers.on('connection', async socket => {
       kind,
       rtpParameters,
     })
+    // console.log('Producer ID: ', producer.rtpParameters)
+
     producer.on('transportclose', () => {
       console.log('transport for this producer closed ')
       producer.close()
     })
-
+    console.log("============================")
     startRecord(peer)
 
     callback({
@@ -150,6 +161,7 @@ peers.on('connection', async socket => {
   })
 
   socket.on('transport-recv-connect', async ({ dtlsParameters }) => {
+    // console.log(`DTLS PARAMS: ${dtlsParameters}`)
     await consumerTransport.connect({ dtlsParameters })
   })
 
@@ -164,6 +176,15 @@ peers.on('connection', async socket => {
           producerId: producer.id,
           rtpCapabilities,
           paused: true,
+        })
+
+        consumer.on('transportclose', () => {
+          console.log('transport close from consumer')
+        })
+
+        consumer.on('producerclose', () => {
+
+          console.log('producer of consumer closed')
         })
 
         const params = {
@@ -194,6 +215,9 @@ peers.on('connection', async socket => {
       producerTransport.close()
     }
     socket.broadcast.emit('closeproduce');
+    if (peer.process) {
+      peer.process.kill()
+    }
 
   })
 
@@ -201,52 +225,16 @@ peers.on('connection', async socket => {
     console.log('consumer resume')
     await consumer.resume()
   })
-
-  socket.on('create-producer', async (callback) => {
-    router = await worker.createRouter({ mediaCodecs })
-    const streamTransport = await router.createPlainTransport({
-      listenInfo: {
-        protocol: "udp",
-        ip: '0.0.0.0',
-      },
-      rtcpMux: true,
-      comedia: true,
-    });
-
-    producer = await streamTransport.produce({
-      kind: 'audio',
-      rtpParameters: {
-        codecs: [{
-          mimeType: 'audio/opus',
-          clockRate: 48000,
-          payloadType: 101,
-          channels: 2,
-          parameters: { 'sprop-stereo': 1 },
-          rtcpFeedback: [
-            { type: 'transport-cc' },
-          ],
-        }],
-        encodings: [{ ssrc: 11111111 }],
-      },
-      appData: {},
-    });
-    callback(streamTransport.tuple.localPort)
-
-  })
-
-  socket.on('recive-producer-audio', async (data) => {
-    startRecord(peer)
-  })
-
 })
 
 const createWebRtcTransport = async (callback) => {
   try {
+    // https://mediasoup.org/documentation/v3/mediasoup/api/#WebRtcTransportOptions
     const webRtcTransport_options = {
       listenIps: [
         {
-          ip: '0.0.0.0',
-          announcedIp: HOST_IP,
+          ip: '0.0.0.0', // replace with relevant IP address
+          announcedIp: '127.0.0.1',
         }
       ],
       enableUdp: true,
@@ -254,8 +242,9 @@ const createWebRtcTransport = async (callback) => {
       preferUdp: true,
     }
 
+    // https://mediasoup.org/documentation/v3/mediasoup/api/#router-createWebRtcTransport
     let transport = await router.createWebRtcTransport(webRtcTransport_options)
-    console.log(`transport id: ${transport.id}`)
+    // console.log(`transport id: ${transport.id}`)
 
     transport.on('dtlsstatechange', dtlsState => {
       if (dtlsState === 'closed') {
@@ -268,6 +257,7 @@ const createWebRtcTransport = async (callback) => {
     })
 
     callback({
+      // https://mediasoup.org/documentation/v3/mediasoup-client/api/#TransportOptions
       params: {
         id: transport.id,
         iceParameters: transport.iceParameters,
@@ -288,11 +278,18 @@ const createWebRtcTransport = async (callback) => {
   }
 }
 
+
+
 const startRecord = async (peer) => {
   let recordInfo = await publishProducerRtpStream(peer, producer);
 
   recordInfo.fileName = Date.now().toString();
-  peer.process = new FFmpeg(recordInfo);
+  const options = {
+    "rtpParameters": recordInfo,
+    //  format is either hls or mp3
+    "format":"hls"
+  }
+  peer.process = new FFmpeg(options);
 
   setTimeout(async () => {
     rtpConsumer.resume();
@@ -302,18 +299,22 @@ const startRecord = async (peer) => {
 };
 
 const publishProducerRtpStream = async (peer, producer, ffmpegRtpCapabilities) => {
-  console.log('publishProducerRtpStream()');
-
+  // Create the mediasoup RTP Transport used to send media to the GStreamer process
   const rtpTransportConfig = config.plainRtpTransport;
 
   const rtpTransport = await router.createPlainTransport(rtpTransportConfig)
+
+  // Set the receiver RTP ports
   const remoteRtpPort = await getPort();
 
   let remoteRtcpPort;
+  // If rtpTransport rtcpMux is false also set the receiver RTCP ports
   if (!rtpTransportConfig.rtcpMux) {
     remoteRtcpPort = await getPort();
   }
 
+
+  // Connect the mediasoup RTP transport to the ports used by GStreamer
   await rtpTransport.connect({
     ip: '127.0.0.1',
     port: remoteRtpPort,
@@ -321,15 +322,21 @@ const publishProducerRtpStream = async (peer, producer, ffmpegRtpCapabilities) =
   });
 
   const codecs = [];
+  // Codec passed to the RTP Consumer must match the codec in the Mediasoup router rtpCapabilities
   const routerCodec = router.rtpCapabilities.codecs.find(
     codec => codec.kind === producer.kind
   );
   codecs.push(routerCodec);
+  // console.log("code:::::::::", codecs)
   const rtpCapabilities = {
     codecs,
     rtcpFeedback: []
   };
 
+  // console.log("rtpCapbiliteis::::::::::,", rtpCapabilities)
+
+  // Start the consumer paused
+  // Once the gstreamer process is ready to consume resume and send a keyframe
   rtpConsumer = await rtpTransport.consume({
     producerId: producer.id,
     rtpCapabilities,
