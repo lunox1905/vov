@@ -1,12 +1,12 @@
-const express =  require('express');
-const https =  require('httpolyglot');
-const fs =  require('fs');
-const path =  require('path');
+const express = require('express');
+const https = require('httpolyglot');
+const fs = require('fs');
+const path = require('path');
 const _dirname = path.resolve();
-const cors =  require("cors");
+const cors = require("cors");
 const { Server } = require('socket.io');
 const mediasoup = require('mediasoup');
-require('dotenv').config();
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 const app = express();
 
@@ -17,18 +17,20 @@ const {
 } = require('./port');
 
 app.use(cors("*"))
-
 const parentDir = path.dirname(_dirname);
-app.use('/play', express.static(path.join(parentDir, 'client')))
+console.log(parentDir)
+app.use('/play', express.static('../../client/public'))
 
 const options = {
-  key: fs.readFileSync('./ssl/key.pem', 'utf-8'),
-  cert: fs.readFileSync('./ssl/cert.pem', 'utf-8')
+  key: fs.readFileSync('../ssl/key.pem', 'utf-8'),
+  cert: fs.readFileSync('../ssl/cert.pem', 'utf-8')
 }
 
 const httpsServer = https.createServer(options, app)
 
 const PORT = process.env.PORT;
+const HOST_IP = process.env.HOST_IP;
+const DEVICE_IP = process.env.DEVICE_IP;
 httpsServer.listen(PORT, () => {
   console.log('listening on port: ' + PORT)
 })
@@ -121,7 +123,7 @@ peers.on('connection', async socket => {
       producerTransport = await createWebRtcTransport(callback)
     }
     else {
-      consumerSocketId=socket.id
+      consumerSocketId = socket.id
       consumerTransport = await createWebRtcTransport(callback)
     }
   })
@@ -191,19 +193,22 @@ peers.on('connection', async socket => {
     if (producerTransport) {
       producerTransport.close()
     }
-      socket.broadcast.emit('closeproduce');
-    
+    socket.broadcast.emit('closeproduce');
+
   })
 
   socket.on('consumer-resume', async () => {
     console.log('consumer resume')
     await consumer.resume()
   })
-  
+
   socket.on('create-producer', async (callback) => {
     router = await worker.createRouter({ mediaCodecs })
     const streamTransport = await router.createPlainTransport({
-      listenIp: '127.0.0.1',
+      listenInfo: {
+        protocol: "udp",
+        ip: '0.0.0.0',
+      },
       rtcpMux: true,
       comedia: true,
     });
@@ -232,7 +237,7 @@ peers.on('connection', async socket => {
   socket.on('recive-producer-audio', async (data) => {
     startRecord(peer)
   })
-  
+
 })
 
 const createWebRtcTransport = async (callback) => {
@@ -241,7 +246,7 @@ const createWebRtcTransport = async (callback) => {
       listenIps: [
         {
           ip: '0.0.0.0',
-          announcedIp: '127.0.0.1',
+          announcedIp: HOST_IP,
         }
       ],
       enableUdp: true,
@@ -290,9 +295,9 @@ const startRecord = async (peer) => {
   peer.process = new FFmpeg(recordInfo);
 
   setTimeout(async () => {
-        rtpConsumer.resume();
-        rtpConsumer.requestKeyFrame();
-    }, 1000);
+    rtpConsumer.resume();
+    rtpConsumer.requestKeyFrame();
+  }, 1000);
 
 };
 
@@ -302,7 +307,6 @@ const publishProducerRtpStream = async (peer, producer, ffmpegRtpCapabilities) =
   const rtpTransportConfig = config.plainRtpTransport;
 
   const rtpTransport = await router.createPlainTransport(rtpTransportConfig)
-
   const remoteRtpPort = await getPort();
 
   let remoteRtcpPort;

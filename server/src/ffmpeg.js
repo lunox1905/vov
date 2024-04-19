@@ -3,7 +3,7 @@ const { EventEmitter } = require('events');
 const { createSdpText } = require('./sdp.js');
 const { convertStringToStream } = require('./utils.js');
 
-const RECORD_FILE_LOCATION_PATH = process.env.RECORD_FILE_LOCATION_PATH || './files';
+const RECORD_FILE_LOCATION_PATH = process.env.RECORD_FILE_LOCATION_PATH || '../files';
 
 module.exports = class FFmpeg {
   constructor(rtpParameters) {
