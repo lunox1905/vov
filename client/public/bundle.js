@@ -4,7 +4,7 @@ const io = require('socket.io-client')
 const mediasoupClient = require('mediasoup-client')
 
 // const socket = io("/mediasoup")
-const socket = io("https://localhost:3001/mediasoup")
+const socket = io("https://localhost:3000/mediasoup")
 let device
 let rtpCapabilities
 let consumerTransport
