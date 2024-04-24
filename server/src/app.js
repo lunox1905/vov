@@ -18,12 +18,12 @@ const {
 
 app.use(cors("*"))
 const parentDir = path.dirname(_dirname);
-console.log(parentDir)
-app.use('/play', express.static('../../client/public'))
+app.use('/play', express.static('../client/public'))
+app.use('/webplay', express.static('../webclient/src'))
 
 const options = {
-  key: fs.readFileSync('../ssl/key.pem', 'utf-8'),
-  cert: fs.readFileSync('../ssl/cert.pem', 'utf-8')
+  key: fs.readFileSync('./ssl/key.pem', 'utf-8'),
+  cert: fs.readFileSync('./ssl/cert.pem', 'utf-8')
 }
 
 const httpsServer = https.createServer(options, app)

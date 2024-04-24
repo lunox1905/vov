@@ -2,9 +2,12 @@ const child_process = require('child_process');
 const { EventEmitter } = require('events');
 const { createSdpText } = require('./sdp.js');
 const { convertStringToStream } = require('./utils.js');
+const path = require("path")
+const fs = require('fs');
+// console.log('path', path.resolve('../files'));
 
-const RECORD_FILE_LOCATION_PATH = process.env.RECORD_FILE_LOCATION_PATH || '../files';
-
+const RECORD_FILE_LOCATION_PATH = process.env.RECORD_FILE_LOCATION_PATH || path.resolve('../files');
+console.log("Save path::", RECORD_FILE_LOCATION_PATH)
 module.exports = class FFmpeg {
   constructor(options) {
     const { rtpParameters, format } = options;
@@ -91,15 +94,25 @@ module.exports = class FFmpeg {
 
     if (this.format == "mp3") {
       commandArgs = commandArgs.concat([
-        `${RECORD_FILE_LOCATION_PATH}/${this._rtpParameters.fileName}.mp3`
+        `${RECORD_FILE_LOCATION_PATH}/mp3/${this._rtpParameters.fileName}.mp3`
       ]);
     }
     else if (this.format == "hls") {
+      const folderPath = `${RECORD_FILE_LOCATION_PATH}/hls/${this._rtpParameters.fileName}`
+      fs.mkdir(folderPath, (err) => {
+        if (err) {
+          // Handle the error if the folder creation failed
+          console.error('Error creating folder:', err);
+        } else {
+          // Folder created successfully
+          console.log('Folder created successfully:', folderPath);
+        }
+      });
       commandArgs = commandArgs.concat([
-        `${RECORD_FILE_LOCATION_PATH}/${this._rtpParameters.fileName}.m3u8`
+        `${folderPath}/${this._rtpParameters.fileName}.m3u8`
       ]);
     }
-      console.log('arg', commandArgs);
+      // console.log('arg', commandArgs);
 
     return commandArgs;
   }
