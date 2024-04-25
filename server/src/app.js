@@ -6,6 +6,7 @@ const _dirname = path.resolve();
 const cors = require("cors");
 const { Server } = require('socket.io');
 const mediasoup = require('mediasoup');
+const SdpBridge = require('mediasoup-sdp-bridge');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 const app = express();
@@ -52,6 +53,7 @@ let producer
 let consumer
 const peer = {};
 let rtpConsumer
+let sdpEndpoint;
 
 const createWorker = async () => {
   worker = await mediasoup.createWorker({
@@ -118,9 +120,14 @@ peers.on('connection', async socket => {
 
   socket.on('createWebRtcTransport', async ({ sender }, callback) => {
     console.log(`Is this a sender request? ${sender}`)
+    router = await worker.createRouter({ mediaCodecs })
     if (sender) {
       producerSocketId = socket.id
       producerTransport = await createWebRtcTransport(callback)
+      // sdpEndpoint = createSdpEndpoint(producerTransport, generateRtpCapabilities0());
+      const rtpCapabilities = router.rtpCapabilities;
+      console.log("DĐ::", rtpCapabilities)
+      sdpEndpoint = SdpBridge.createSdpEndpoint(producerTransport, rtpCapabilities);
     }
     else {
       consumerSocketId = socket.id
@@ -130,6 +137,22 @@ peers.on('connection', async socket => {
 
   socket.on('transport-connect', async ({ dtlsParameters }) => {
     await producerTransport.connect({ dtlsParameters })
+  })
+
+  socket.on('transport-test-sdp', async (sdpOffer) => {
+    const producers = await sdpEndpoint.processOffer(sdpOffer);
+    producer = producers[0]
+    const sdpAnswer = sdpEndpoint.createAnswer();
+    socket.emit("answer", sdpAnswer)
+    // let sdpEndpoint = createSdpEndpoint(transport,);
+    // let producers = await sdpEndpoint.processOffer(sdpOffer);
+    // let answer = sdpEndpoint.createAnswer();
+
+    // console.log("DD::", answer)
+  })
+
+  socket.on('record', async () => {
+    startRecord(peer)
   })
 
   socket.on('transport-produce', async ({ kind, rtpParameters, appData }, callback) => {
