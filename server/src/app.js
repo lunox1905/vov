@@ -23,8 +23,8 @@ app.use('/play', express.static('../client/public'))
 app.use('/webplay', express.static('../webclient/src'))
 
 const options = {
-  key: fs.readFileSync('./ssl/key.pem', 'utf-8'),
-  cert: fs.readFileSync('./ssl/cert.pem', 'utf-8')
+  key: fs.readFileSync('../ssl/key.pem', 'utf-8'),
+  cert: fs.readFileSync('../ssl/cert.pem', 'utf-8')
 }
 
 const httpsServer = https.createServer(options, app)
@@ -32,6 +32,7 @@ const httpsServer = https.createServer(options, app)
 const PORT = process.env.PORT;
 const HOST_IP = process.env.HOST_IP;
 const DEVICE_IP = process.env.DEVICE_IP;
+console.log(HOST_IP)
 httpsServer.listen(PORT, () => {
   console.log('listening on port: ' + PORT)
 })
@@ -254,6 +255,7 @@ peers.on('connection', async socket => {
       },
       appData: {},
     });
+    console.log("sdsđs", streamTransport.tuple.localPort)
     callback(streamTransport.tuple.localPort)
 
   })
@@ -316,7 +318,7 @@ const startRecord = async (peer) => {
   recordInfo.fileName = Date.now().toString();
   const options = {
     "rtpParameters": recordInfo,
-    "format":"mp3"
+    "format": "mp3"
   }
   peer.process = new FFmpeg(options);
 

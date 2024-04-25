@@ -30,7 +30,7 @@ module.exports = class FFmpeg {
     const sdpStream = convertStringToStream(sdpString);
 
     console.log('createProcess() [sdpString:%s]', sdpString);
-
+    console.log(this._commandArgs)
     this._process = child_process.spawn('ffmpeg', this._commandArgs);
 
     if (this._process.stderr) {
@@ -112,7 +112,7 @@ module.exports = class FFmpeg {
         `${folderPath}/${this._rtpParameters.fileName}.m3u8`
       ]);
     }
-      // console.log('arg', commandArgs);
+    // console.log('arg', commandArgs);
 
     return commandArgs;
   }
