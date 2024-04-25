@@ -18,12 +18,12 @@ const {
 
 app.use(cors("*"))
 const parentDir = path.dirname(_dirname);
-console.log(parentDir)
-app.use('/play', express.static('../../client/public'))
+app.use('/play', express.static('../client/public'))
+app.use('/webplay', express.static('../webclient/src'))
 
 const options = {
-  key: fs.readFileSync('../ssl/key.pem', 'utf-8'),
-  cert: fs.readFileSync('../ssl/cert.pem', 'utf-8')
+  key: fs.readFileSync('./ssl/key.pem', 'utf-8'),
+  cert: fs.readFileSync('./ssl/cert.pem', 'utf-8')
 }
 
 const httpsServer = https.createServer(options, app)
@@ -255,8 +255,7 @@ const createWebRtcTransport = async (callback) => {
       preferUdp: true,
     }
 
-    let transport = await router.createWebRtcTransport(webRtcTransport_options)
-    console.log(`transport id: ${transport.id}`)
+    let transport = await router.createWebRtcTransport(webRtcTransport_options);
 
     transport.on('dtlsstatechange', dtlsState => {
       if (dtlsState === 'closed') {
@@ -277,8 +276,7 @@ const createWebRtcTransport = async (callback) => {
       }
     })
 
-    return transport
-
+    return transport;
   } catch (error) {
     console.log(error)
     callback({
@@ -293,7 +291,11 @@ const startRecord = async (peer) => {
   let recordInfo = await publishProducerRtpStream(peer, producer);
 
   recordInfo.fileName = Date.now().toString();
-  peer.process = new FFmpeg(recordInfo);
+  const options = {
+    "rtpParameters": recordInfo,
+    "format":"mp3"
+  }
+  peer.process = new FFmpeg(options);
 
   setTimeout(async () => {
     rtpConsumer.resume();
