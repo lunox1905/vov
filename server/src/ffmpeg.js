@@ -30,7 +30,7 @@ module.exports = class FFmpeg {
     const sdpStream = convertStringToStream(sdpString);
 
     console.log('createProcess() [sdpString:%s]', sdpString);
-    console.log(this._commandArgs)
+
     this._process = child_process.spawn('ffmpeg', this._commandArgs);
 
     if (this._process.stderr) {
@@ -89,7 +89,6 @@ module.exports = class FFmpeg {
       '-i',
       'pipe:0'
     ];
-    console.log("DĐ::", this.args)
     commandArgs = commandArgs.concat(this.args);
 
     if (this.format == "mp3") {
@@ -131,7 +130,7 @@ module.exports = class FFmpeg {
   get _hlsArgs() {
     return [
       '-hls_time', '5',           // Segment duration in seconds
-      '-hls_list_size', '6',       // Maximum number of playlist entries
+      '-hls_list_size', '100',       // Maximum number of playlist entries
       '-start_number', '1',        // Start number for the segment filenames
       '-f', 'hls',                 // Output format HLS
     ];

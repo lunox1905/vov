@@ -4,21 +4,20 @@ const path = require('path')
 
 const port = 8000
 http.createServer(function (request, response) {
-    // console.log('request starting...');
-    const base = path.basename(request.url, path.extname(request.url))
-    const extractBase = base.substring(0, base.length - 1)
-    let filePath=""
-    var filePathOption1 = path.resolve(`../files/hls/${base}/${request.url}`);
-    var filePathOption2 = path.resolve(`../files/hls/${extractBase}/${request.url}`)
+    const url = request.url.substring(request.url.lastIndexOf('/') + 1);
+    const base = path.basename(url, path.extname(url))
+    const extractBase = base.substring(0, base.indexOf('p') + 1);
+    let filePath = ""
+    var filePathOption1 = path.resolve(`../server/files/hls/${base}/${url}`);
+    var filePathOption2 = path.resolve(`../server/files/hls/${extractBase}/${url}`)
 
     if (fs.existsSync(filePathOption1)) {
-        filePath=filePathOption1
+        filePath = filePathOption1
     }
     else {
-        filePath=filePathOption2
+        filePath = filePathOption2
     }
-    // console.log('filepath',filePath);
-    
+
     fs.readFile(filePath, function (error, content) {
         response.writeHead(200, { 'Access-Control-Allow-Origin': '*' });
         if (error) {
@@ -39,4 +38,3 @@ http.createServer(function (request, response) {
     });
 
 }).listen(port);
-console.log(`Server running at http://127.0.0.1:${port}/`);

@@ -19,7 +19,7 @@ const {
 
 app.use(cors("*"))
 const parentDir = path.dirname(_dirname);
-app.use('/play', express.static('../client/public'))
+app.use('/play', express.static('../../client/public'))
 app.use('/webplay', express.static('../webclient/src'))
 
 const options = {
@@ -32,7 +32,6 @@ const httpsServer = https.createServer(options, app)
 const PORT = process.env.PORT;
 const HOST_IP = process.env.HOST_IP;
 const DEVICE_IP = process.env.DEVICE_IP;
-console.log(HOST_IP)
 httpsServer.listen(PORT, () => {
   console.log('listening on port: ' + PORT)
 })
@@ -55,23 +54,8 @@ let consumer
 const peer = {};
 let rtpConsumer
 let sdpEndpoint;
+let streamTransport;
 
-const createWorker = async () => {
-  worker = await mediasoup.createWorker({
-    rtcMinPort: 20000,
-    rtcMaxPort: 30000,
-  })
-  console.log(`worker pid ${worker.pid}`)
-
-  worker.on('died', error => {
-    console.error('mediasoup worker has died');
-    setTimeout(() => process.exit(1), 2000);
-  })
-
-  return worker
-}
-
-worker = createWorker()
 
 const mediaCodecs = [
   {
@@ -94,6 +78,42 @@ const mediaCodecs = [
     },
   },
 ]
+
+const createWorker = async () => {
+  worker = await mediasoup.createWorker({
+    rtcMinPort: 20000,
+    rtcMaxPort: 30000,
+  })
+  console.log(`worker pid ${worker.pid}`)
+
+  worker.on('died', error => {
+    console.error('mediasoup worker has died');
+    setTimeout(() => process.exit(1), 2000);
+  })
+  return worker
+}
+
+const createPlain = async () => {
+  router = await worker.createRouter({ mediaCodecs })
+  const streamTransport = await router.createPlainTransport({
+    listenInfo: {
+      protocol: "udp",
+      ip: '0.0.0.0',
+      announcedIp: HOST_IP,
+      // port: 26000
+    },
+    rtcpMux: true,
+    comedia: true,
+  });
+
+  streamTransport.on('close', () => {
+    console.log('===== transport stream closed =====')
+  })
+
+  return streamTransport;
+}
+
+worker = createWorker()
 
 peers.on('connection', async socket => {
 
@@ -121,14 +141,9 @@ peers.on('connection', async socket => {
 
   socket.on('createWebRtcTransport', async ({ sender }, callback) => {
     console.log(`Is this a sender request? ${sender}`)
-    router = await worker.createRouter({ mediaCodecs })
     if (sender) {
       producerSocketId = socket.id
       producerTransport = await createWebRtcTransport(callback)
-      // sdpEndpoint = createSdpEndpoint(producerTransport, generateRtpCapabilities0());
-      const rtpCapabilities = router.rtpCapabilities;
-      console.log("DĐ::", rtpCapabilities)
-      sdpEndpoint = SdpBridge.createSdpEndpoint(producerTransport, rtpCapabilities);
     }
     else {
       consumerSocketId = socket.id
@@ -136,8 +151,19 @@ peers.on('connection', async socket => {
     }
   })
 
-  socket.on('transport-connect', async ({ dtlsParameters }) => {
-    await producerTransport.connect({ dtlsParameters })
+  socket.on('createWebRtcTransportForDevice', async ({ sender }, callback) => {
+    console.log(`Is this a sender request? ${sender}`)
+    router = await worker.createRouter({ mediaCodecs })
+    if (sender) {
+      producerSocketId = socket.id
+      producerTransport = await createWebRtcTransport(callback)
+      const rtpCapabilities = router.rtpCapabilities;
+      sdpEndpoint = SdpBridge.createSdpEndpoint(producerTransport, rtpCapabilities);
+    }
+    else {
+      consumerSocketId = socket.id
+      consumerTransport = await createWebRtcTransport(callback)
+    }
   })
 
   socket.on('transport-test-sdp', async (sdpOffer) => {
@@ -154,6 +180,10 @@ peers.on('connection', async socket => {
 
   socket.on('record', async () => {
     startRecord(peer)
+  })
+
+  socket.on('transport-connect', async ({ dtlsParameters }) => {
+    await producerTransport.connect({ dtlsParameters })
   })
 
   socket.on('transport-produce', async ({ kind, rtpParameters, appData }, callback) => {
@@ -183,7 +213,6 @@ peers.on('connection', async socket => {
         producerId: producer.id,
         rtpCapabilities
       })) {
-
         consumer = await consumerTransport.consume({
           producerId: producer.id,
           rtpCapabilities,
@@ -227,17 +256,7 @@ peers.on('connection', async socket => {
   })
 
   socket.on('create-producer', async (callback) => {
-    router = await worker.createRouter({ mediaCodecs })
-    const streamTransport = await router.createPlainTransport({
-      listenInfo: {
-        protocol: "udp",
-        ip: '0.0.0.0',
-        announcedIp: HOST_IP,
-      },
-      rtcpMux: true,
-      comedia: true,
-    });
-
+    streamTransport = await createPlain()
     producer = await streamTransport.produce({
       kind: 'audio',
       rtpParameters: {
@@ -255,7 +274,6 @@ peers.on('connection', async socket => {
       },
       appData: {},
     });
-    console.log("sdsđs", streamTransport.tuple.localPort)
     callback(streamTransport.tuple.localPort)
 
   })
@@ -315,10 +333,10 @@ const createWebRtcTransport = async (callback) => {
 const startRecord = async (peer) => {
   let recordInfo = await publishProducerRtpStream(peer, producer);
 
-  recordInfo.fileName = Date.now().toString();
+  recordInfo.fileName = Date.now().toString() + "p";
   const options = {
     "rtpParameters": recordInfo,
-    "format": "mp3"
+    "format": "hls"
   }
   peer.process = new FFmpeg(options);
 
@@ -330,8 +348,6 @@ const startRecord = async (peer) => {
 };
 
 const publishProducerRtpStream = async (peer, producer, ffmpegRtpCapabilities) => {
-  console.log('publishProducerRtpStream()');
-
   const rtpTransportConfig = config.plainRtpTransport;
 
   const rtpTransport = await router.createPlainTransport(rtpTransportConfig)
