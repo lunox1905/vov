@@ -86,7 +86,6 @@ module.exports = class FFmpeg {
       '-i',
       'pipe:0'
     ];
-    console.log("DĐ::", this.args)
     commandArgs = commandArgs.concat(this.args);
 
     if (this.format == "mp3") {

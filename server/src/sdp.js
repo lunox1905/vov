@@ -1,7 +1,7 @@
 const { getCodecInfoFromRtpParameters } = require('./utils.js');
 
 module.exports.createSdpText = (rtpParameters) => {
-
+  console.log(rtpParameters)
   const audioCodecInfo = getCodecInfoFromRtpParameters('audio', rtpParameters.rtpParameters);
 
   return `v=0

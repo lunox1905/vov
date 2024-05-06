@@ -3,7 +3,7 @@ const io = require('socket.io-client')
 const mediasoupClient = require('mediasoup-client')
 
 // const socket = io("/mediasoup")
-const socket = io("https://thaichinh.top/mediasoup")
+const socket = io("https://0887-14-239-90-229.ngrok-free.app/mediasoup")
 let device
 let rtpCapabilities
 let consumerTransport
@@ -24,12 +24,12 @@ const saveStream = async (stream) => {
     mediaRecorder = new MediaRecorder(stream);
     mediaRecorder.ondataavailable = function (event) {
       if (event.data.size > 0) {
-
+        
         recordedChunks.push(event.data);
       }
     };
 
-    mediaRecorder.onstop = (e) => {
+    mediaRecorder.onstop = (e) => {      
       const blob = new Blob(recordedChunks, { type: 'audio/opus' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -82,6 +82,8 @@ const createDevice = async () => {
 const getRtpCapabilities = () => {
   console.log('stage1');
   socket.emit('createRoom', (data) => {
+
+    console.log("S!", data)
     rtpCapabilities = data.rtpCapabilities
     createDevice()
   })
@@ -131,11 +133,11 @@ const connectRecvTransport = async () => {
       kind: params.kind,
       rtpParameters: params.rtpParameters
     })
-    const { track } = consumer
-    console.log("tracks", track);
-
+    const { track} = consumer
+    console.log("tracks",track);
+      
     // let stream = new MediaStream([track])
-    let audiostream = new MediaStream([track])
+    let audiostream=new MediaStream([track])
     remoteVideo.srcObject = audiostream
     await saveStream(audiostream)
 
