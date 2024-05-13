@@ -1,7 +1,6 @@
 //index.js
 const io = require('socket.io-client')
 const mediasoupClient = require('mediasoup-client')
-
 // const socket = io("/mediasoup")
 const socket = io("https://thaichinh.top/mediasoup")
 let device

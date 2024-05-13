@@ -6,7 +6,7 @@ const _dirname = path.resolve();
 const cors = require("cors");
 const { Server } = require('socket.io');
 const mediasoup = require('mediasoup');
-const SdpBridge = require('mediasoup-sdp-bridge');
+// const SdpBridge = require('mediasoup-sdp-bridge');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 const app = express();
@@ -19,12 +19,14 @@ const {
 
 app.use(cors("*"))
 const parentDir = path.dirname(_dirname);
-app.use('/play', express.static('../../client/public'))
-app.use('/webplay', express.static('../webclient/src'))
+console.log(" path", path.resolve("../client/public'"))
+app.use('/play', express.static('../client/public'))
+app.use('/webplay', express.static('../webclient/public'))
 
+console.log(" path", path.resolve("./ssl/key.pem"))
 const options = {
-  key: fs.readFileSync('../ssl/key.pem', 'utf-8'),
-  cert: fs.readFileSync('../ssl/cert.pem', 'utf-8')
+  key: fs.readFileSync('./ssl/key.pem', 'utf-8'),
+  cert: fs.readFileSync('./ssl/cert.pem', 'utf-8')
 }
 
 const httpsServer = https.createServer(options, app)
@@ -151,20 +153,20 @@ peers.on('connection', async socket => {
     }
   })
 
-  socket.on('createWebRtcTransportForDevice', async ({ sender }, callback) => {
-    console.log(`Is this a sender request? ${sender}`)
-    router = await worker.createRouter({ mediaCodecs })
-    if (sender) {
-      producerSocketId = socket.id
-      producerTransport = await createWebRtcTransport(callback)
-      const rtpCapabilities = router.rtpCapabilities;
-      sdpEndpoint = SdpBridge.createSdpEndpoint(producerTransport, rtpCapabilities);
-    }
-    else {
-      consumerSocketId = socket.id
-      consumerTransport = await createWebRtcTransport(callback)
-    }
-  })
+  // socket.on('createWebRtcTransportForDevice', async ({ sender }, callback) => {
+  //   console.log(`Is this a sender request? ${sender}`)
+  //   router = await worker.createRouter({ mediaCodecs })
+  //   if (sender) {
+  //     producerSocketId = socket.id
+  //     producerTransport = await createWebRtcTransport(callback)
+  //     const rtpCapabilities = router.rtpCapabilities;
+  //     sdpEndpoint = SdpBridge.createSdpEndpoint(producerTransport, rtpCapabilities);
+  //   }
+  //   else {
+  //     consumerSocketId = socket.id
+  //     consumerTransport = await createWebRtcTransport(callback)
+  //   }
+  // })
 
   socket.on('transport-test-sdp', async (sdpOffer) => {
     const producers = await sdpEndpoint.processOffer(sdpOffer);
