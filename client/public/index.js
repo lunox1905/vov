@@ -1,9 +1,8 @@
 //index.js
 const io = require('socket.io-client')
 const mediasoupClient = require('mediasoup-client')
-
 // const socket = io("/mediasoup")
-const socket = io("https://localhost:3001/mediasoup")
+const socket = io("https://thaichinh.top/mediasoup")
 let device
 let rtpCapabilities
 let consumerTransport
@@ -19,40 +18,40 @@ socket.on('connection-success', ({ socketId, existsProducer }) => {
 })
 
 
-const saveStream = async (stream) => {
-  try {
-    mediaRecorder = new MediaRecorder(stream);
-    mediaRecorder.ondataavailable = function (event) {
-      if (event.data.size > 0) {
-        
-        recordedChunks.push(event.data);
-      }
-    };
+// const saveStream = async (stream) => {
+//   try {
+//     mediaRecorder = new MediaRecorder(stream);
+//     mediaRecorder.ondataavailable = function (event) {
+//       if (event.data.size > 0) {
 
-    mediaRecorder.onstop = (e) => {      
-      const blob = new Blob(recordedChunks, { type: 'audio/opus' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'recorded-video.webm';
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url)
-      recordedChunks = [];
-    }
+//         recordedChunks.push(event.data);
+//       }
+//     };
 
-    mediaRecorder.start()
+//     mediaRecorder.onstop = (e) => {
+//       const blob = new Blob(recordedChunks, { type: 'audio/opus' });
+//       const url = URL.createObjectURL(blob);
+//       const a = document.createElement('a');
+//       a.href = url;
+//       a.download = 'recorded-video.webm';
+//       document.body.appendChild(a);
+//       a.click();
+//       window.URL.revokeObjectURL(url)
+//       recordedChunks = [];
+//     }
 
-  } catch (err) {
-    console.error('Error accessing webcam:', err);
-  }
-}
+//     mediaRecorder.start()
+
+//   } catch (err) {
+//     console.error('Error accessing webcam:', err);
+//   }
+// }
 
 
 
 socket.on("closeproduce", () => {
   const video = document.getElementById("remoteVideo")
-  mediaRecorder.stop()
+  // mediaRecorder.stop()
   video.src = ''
 })
 
@@ -131,13 +130,13 @@ const connectRecvTransport = async () => {
       kind: params.kind,
       rtpParameters: params.rtpParameters
     })
-    const { track} = consumer
-    console.log("tracks",track);
-      
+    const { track } = consumer
+    console.log("tracks", track);
+
     // let stream = new MediaStream([track])
-    let audiostream=new MediaStream([track])
+    let audiostream = new MediaStream([track])
     remoteVideo.srcObject = audiostream
-    await saveStream(audiostream)
+    // await saveStream(audiostream)
 
     socket.emit('consumer-resume')
   })

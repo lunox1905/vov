@@ -1,16 +1,17 @@
-import child_process from 'child_process';
-import { EventEmitter } from 'events';
-import { createSdpText } from './sdp.js';
-import { convertStringToStream } from './utils.js';
-import { format } from 'path';
+const child_process = require('child_process');
+const { EventEmitter } = require('events');
+const { createSdpText } = require('./sdp.js');
+const { convertStringToStream } = require('./utils.js');
+const path = require("path")
+const fs = require('fs');
+// console.log('path', path.resolve('../files'));
 
-const RECORD_FILE_LOCATION_PATH = process.env.RECORD_FILE_LOCATION_PATH || './files';
-
-export default class FFmpeg {
+const RECORD_FILE_LOCATION_PATH = process.env.RECORD_FILE_LOCATION_PATH || path.resolve('../files');
+console.log("Save path::", RECORD_FILE_LOCATION_PATH)
+module.exports = class FFmpeg {
   constructor(options) {
-
-    const { rtpParameters, format } = options
-    this.format = format
+    const { rtpParameters, format } = options;
+    this.format = format;
     this._rtpParameters = rtpParameters;
     this._process = null;
     this._observer = new EventEmitter();
@@ -20,7 +21,6 @@ export default class FFmpeg {
       "hls": this._hlsArgs
     }
     this.args = this.formats[format]
-    // this._createProcess("mp3", this._audioArgs);
     this._createProcess();
   }
   _createProcess() {
@@ -89,7 +89,9 @@ export default class FFmpeg {
       '-i',
       'pipe:0'
     ];
+    commandArgs = commandArgs.concat(this.args);
 
+<<<<<<< HEAD
     commandArgs = commandArgs.concat(this.args);
 
     if (this.format == "mp3") {
@@ -103,6 +105,29 @@ export default class FFmpeg {
       ]);
     }
       console.log('arg', commandArgs);
+=======
+    if (this.format == "mp3") {
+      commandArgs = commandArgs.concat([
+        `${RECORD_FILE_LOCATION_PATH}/mp3/${this._rtpParameters.fileName}.mp3`
+      ]);
+    }
+    else if (this.format == "hls") {
+      const folderPath = `${RECORD_FILE_LOCATION_PATH}/hls/${this._rtpParameters.fileName}`
+      fs.mkdir(folderPath, (err) => {
+        if (err) {
+          // Handle the error if the folder creation failed
+          console.error('Error creating folder:', err);
+        } else {
+          // Folder created successfully
+          console.log('Folder created successfully:', folderPath);
+        }
+      });
+      commandArgs = commandArgs.concat([
+        `${folderPath}/${this._rtpParameters.fileName}.m3u8`
+      ]);
+    }
+    // console.log('arg', commandArgs);
+>>>>>>> 387388ad805bff4de16da83adbab0f3d8a8e1b6f
 
     return commandArgs;
   }
@@ -116,6 +141,17 @@ export default class FFmpeg {
       '-c:a',
       'mp3',
 
+<<<<<<< HEAD
+=======
+    ];
+  }
+  get _hlsArgs() {
+    return [
+      '-hls_time', '5',           // Segment duration in seconds
+      '-hls_list_size', '100',       // Maximum number of playlist entries
+      '-start_number', '1',        // Start number for the segment filenames
+      '-f', 'hls',                 // Output format HLS
+>>>>>>> 387388ad805bff4de16da83adbab0f3d8a8e1b6f
     ];
   }
   get _hlsArgs() {
