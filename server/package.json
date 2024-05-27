@@ -2,7 +2,6 @@
   "name": "server",
   "version": "1.0.0",
   "description": "",
-  "type": "module",
   "main": "app.js",
   "scripts": {
     "start": "nodemon --watch ../ src/app.js",
@@ -15,14 +14,9 @@
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "httpolyglot": "^0.1.2",
-<<<<<<< HEAD
-    "mediasoup": "^3.13.24",
-    "nodemon": "^3.1.0",
-=======
     "mediasoup": "^3.14.1",
     "mediasoup-client": "^3.7.7",
     "mediasoup-sdp-bridge": "https://github.com/OpenVidu/mediasoup-sdp-bridge/tarball/v3",
->>>>>>> 387388ad805bff4de16da83adbab0f3d8a8e1b6f
     "socket.io": "^4.7.5"
   }
 }

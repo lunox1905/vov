@@ -21,17 +21,17 @@ module.exports = class FFmpeg {
       "hls": this._hlsArgs
     }
     this.args = this.formats[format]
+
     this._createProcess();
   }
-  _createProcess() {
 
+  _createProcess() {
     const sdpString = createSdpText(this._rtpParameters);
     const sdpStream = convertStringToStream(sdpString);
-    // console.log('createProcess() [sdpString:%s]', sdpString);
-    console.log('create process');
 
-    this._process = child_process.spawn('ffmpeg', this._commandArgs());
-    console.log('create', this._process === null ? "null process" : this._process.pid);
+    console.log('createProcess() [sdpString:%s]', sdpString);
+
+    this._process = child_process.spawn('ffmpeg', this._commandArgs);
 
     if (this._process.stderr) {
       this._process.stderr.setEncoding('utf-8');
@@ -41,21 +41,22 @@ module.exports = class FFmpeg {
       );
     }
 
-    // if (this._process.stdout) {
-    //   this._process.stdout.setEncoding('utf-8');
+    if (this._process.stdout) {
+      this._process.stdout.setEncoding('utf-8');
 
-    //   this._process.stdout.on('data', data =>
-    //     console.log('ffmpeg::process::data [data:%o]', data)
-    //   );
-    // }
+      this._process.stdout.on('data', data =>
+        console.log('ffmpeg::process::data [data:%o]', data)
+      );
+    }
 
-    // this._process.on('message', message =>
-    //   console.log('ffmpeg::process::message [message:%o]', message)
-    // );
+    this._process.on('message', message =>
+      console.log('ffmpeg::process::message [message:%o]', message)
+    );
 
     this._process.on('error', error =>
       console.error('ffmpeg::process::error [error:%o]', error)
     );
+
     this._process.once('close', () => {
       console.log('ffmpeg::process::close');
       this._observer.emit('process-close');
@@ -71,12 +72,11 @@ module.exports = class FFmpeg {
   }
 
   kill() {
-
-    console.log('kill() [pid:%d]', this._process === null ? "process is null" : this._process.pid);
+    console.log('kill() [pid:%d]', this._process.pid);
     this._process.kill('SIGINT');
   }
 
-  _commandArgs() {
+  get _commandArgs() {
     let commandArgs = [
       '-loglevel',
       'debug',
@@ -91,21 +91,6 @@ module.exports = class FFmpeg {
     ];
     commandArgs = commandArgs.concat(this.args);
 
-<<<<<<< HEAD
-    commandArgs = commandArgs.concat(this.args);
-
-    if (this.format == "mp3") {
-      commandArgs = commandArgs.concat([
-        `${RECORD_FILE_LOCATION_PATH}/${this._rtpParameters.fileName}.mp3`
-      ]);
-    }
-    else if (this.format == "hls") {
-      commandArgs = commandArgs.concat([
-        `${RECORD_FILE_LOCATION_PATH}/${this._rtpParameters.fileName}.m3u8`
-      ]);
-    }
-      console.log('arg', commandArgs);
-=======
     if (this.format == "mp3") {
       commandArgs = commandArgs.concat([
         `${RECORD_FILE_LOCATION_PATH}/mp3/${this._rtpParameters.fileName}.mp3`
@@ -127,7 +112,6 @@ module.exports = class FFmpeg {
       ]);
     }
     // console.log('arg', commandArgs);
->>>>>>> 387388ad805bff4de16da83adbab0f3d8a8e1b6f
 
     return commandArgs;
   }
@@ -141,8 +125,6 @@ module.exports = class FFmpeg {
       '-c:a',
       'mp3',
 
-<<<<<<< HEAD
-=======
     ];
   }
   get _hlsArgs() {
@@ -151,17 +133,6 @@ module.exports = class FFmpeg {
       '-hls_list_size', '100',       // Maximum number of playlist entries
       '-start_number', '1',        // Start number for the segment filenames
       '-f', 'hls',                 // Output format HLS
->>>>>>> 387388ad805bff4de16da83adbab0f3d8a8e1b6f
     ];
   }
-  get _hlsArgs() {
-    return [
-      '-hls_time', '5',           // Segment duration in seconds
-      '-hls_list_size', '6',       // Maximum number of playlist entries
-      '-start_number', '1',        // Start number for the segment filenames
-      '-f', 'hls',                 // Output format HLS
-
-    ];
-  }
-
 }
