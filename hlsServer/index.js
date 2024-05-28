@@ -8,9 +8,8 @@ http.createServer(function (request, response) {
     const base = path.basename(url, path.extname(url))
     const extractBase = base.substring(0, base.indexOf('p') + 1);
     let filePath = ""
-    var filePathOption1 = path.resolve(`../server/files/hls/${base}/${url}`);
-    var filePathOption2 = path.resolve(`../server/files/hls/${extractBase}/${url}`)
-
+    var filePathOption1 = path.resolve(`../files/hls/${base}/${url}`);
+    var filePathOption2 = path.resolve(`../files/hls/${extractBase}/${url}`)
     if (fs.existsSync(filePathOption1)) {
         filePath = filePathOption1
     }

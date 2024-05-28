@@ -1,13 +1,15 @@
 const child_process = require('child_process');
 const { EventEmitter } = require('events');
 const { createSdpText } = require('./sdp.js');
-const { convertStringToStream } = require('./utils.js');
+const { convertStringToStream ,getOS} = require('./utils.js');
 const path = require("path")
 const fs = require('fs');
+
 // console.log('path', path.resolve('../files'));
 
 const RECORD_FILE_LOCATION_PATH = process.env.RECORD_FILE_LOCATION_PATH || path.resolve('../files');
 console.log("Save path::", RECORD_FILE_LOCATION_PATH)
+const myOS = getOS()
 module.exports = class FFmpeg {
   constructor(options) {
     const { rtpParameters, format } = options;
@@ -91,13 +93,27 @@ module.exports = class FFmpeg {
     ];
     commandArgs = commandArgs.concat(this.args);
 
+    let filePath = ""
     if (this.format == "mp3") {
+      if (myOS == "Windows") {
+        filePath = `${RECORD_FILE_LOCATION_PATH}\\mp3\\${this._rtpParameters.fileName}.mp3`
+      }
+      else {
+        filePath = `${RECORD_FILE_LOCATION_PATH}/mp3/${this._rtpParameters.fileName}.mp3`
+      }
       commandArgs = commandArgs.concat([
-        `${RECORD_FILE_LOCATION_PATH}/mp3/${this._rtpParameters.fileName}.mp3`
+      filePath
       ]);
     }
     else if (this.format == "hls") {
-      const folderPath = `${RECORD_FILE_LOCATION_PATH}/hls/${this._rtpParameters.fileName}`
+      let folderPath =""
+      if (myOS == "Windows") {
+        folderPath = `${RECORD_FILE_LOCATION_PATH}\\hls\\${this._rtpParameters.fileName}`
+      }
+      else {
+        folderPath = `${RECORD_FILE_LOCATION_PATH}/hls/${this._rtpParameters.fileName}`
+      }
+
       fs.mkdir(folderPath, (err) => {
         if (err) {
           // Handle the error if the folder creation failed
