@@ -3,7 +3,7 @@
 const io = require('socket.io-client')
 const mediasoupClient = require('mediasoup-client')
 // const socket = io("/mediasoup")
-const socket = io("https://thaichinh.top/mediasoup")
+const socket = io("https://c2ef-14-163-78-92.ngrok-free.app/mediasoup")
 let device
 let rtpCapabilities
 let consumerTransport
@@ -30,6 +30,10 @@ const goConsume = () => {
   device === undefined ? getRtpCapabilities() : createRecvTransport()
 }
 
+const goConsume2 = () => {
+  device === undefined ? getRtpCapabilities() : createRecvTransport2()
+}
+
 const createDevice = async () => {
   console.log('stage2');
 
@@ -41,7 +45,7 @@ const createDevice = async () => {
     })
 
     createRecvTransport()
-
+    createRecvTransport2()
   } catch (error) {
     console.log(error)
     if (error.name === 'UnsupportedError')
@@ -73,12 +77,19 @@ const createRecvTransport = async () => {
         await socket.emit('transport-recv-connect', {
           dtlsParameters,
         })
-
+        
         callback()
       } catch (error) {
         errback(error)
       }
     })
+
+      
+    // consumerTransport.on('connectionstatechange', (state) => {
+    // if (state == 'disconnected') {
+    //     createRecvTransport()
+    // }
+    // })
 
     connectRecvTransport()
   })
@@ -88,8 +99,9 @@ const connectRecvTransport = async () => {
   console.log('stage4');
   await socket.emit('consume', {
     rtpCapabilities: device.rtpCapabilities,
+    channelSlug: channelSlug
   }, async ({ params }) => {
-
+    console.log(params)
     if (params.error) {
       console.log('error', params.error);
       return
@@ -101,6 +113,7 @@ const connectRecvTransport = async () => {
       kind: params.kind,
       rtpParameters: params.rtpParameters
     })
+
     const { track } = consumer
     console.log("tracks", track);
 
@@ -113,4 +126,11 @@ const connectRecvTransport = async () => {
   })
 }
 
-btnRecvSendTransport.addEventListener('click', goConsume)
+socket.on('reconnect', async () => {
+    console.log('consumer resume ====================')
+    createRecvTransport()
+})
+
+btnRecvSendTransport.addEventListener('click',() => goConsume('kenh1'))
+btnRecvSendTransport2.addEventListener('click', () => goConsume('kenh2'))
+btnRecvSendTransport3.addEventListener('click', () => goConsume('kenh3'))  
