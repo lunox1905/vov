@@ -6,7 +6,7 @@ const port = 8000
 http.createServer(function (request, response) {
     const url = request.url.substring(request.url.lastIndexOf('/') + 1);
     const base = path.basename(url, path.extname(url))
-    const extractBase = base.substring(0, base.indexOf('p') + 1);
+    const extractBase = base.substring(0, base.indexOf('-hls') + 4);
     let filePath = ""
     var filePathOption1 = path.resolve(`../server/files/hls/${base}/${url}`);
     var filePathOption2 = path.resolve(`../server/files/hls/${extractBase}/${url}`)

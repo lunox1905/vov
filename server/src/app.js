@@ -23,6 +23,41 @@ const parentDir = path.dirname(_dirname);
 app.use('/play', express.static('../../client/public'))
 app.use('/webplay', express.static('../webclient/src'))
 
+app.use('/playhls', (request, response) => {
+  const url = request.url.substring(request.url.lastIndexOf('/') + 1);
+    const base = path.basename(url, path.extname(url))
+    const extractBase = base.substring(0, base.indexOf('-hls') + 4);
+    let filePath = ""
+    var filePathOption1 = path.resolve(`../files/hls/${base}/${url}`);
+    var filePathOption2 = path.resolve(`../files/hls/${extractBase}/${url}`)
+
+    if (fs.existsSync(filePathOption1)) {
+        filePath = filePathOption1
+    }
+    else {
+        filePath = filePathOption2
+    }
+
+    fs.readFile(filePath, function (error, content) {
+        response.writeHead(200, { 'Access-Control-Allow-Origin': '*' });
+        if (error) {
+            if (error.code == 'ENOENT') {
+                fs.readFile('./404.html', function (error, content) {
+                    response.end(content, 'utf-8');
+                });
+            }
+            else {
+                response.writeHead(500);
+                response.end(' error: ' + error.code + ' ..\n');
+                response.end();
+            }
+        }
+        else {
+            response.end(content, 'utf-8');
+        }
+    });
+})
+
 const options = {
   key: fs.readFileSync('../ssl/key.pem', 'utf-8'),
   cert: fs.readFileSync('../ssl/cert.pem', 'utf-8')
@@ -55,6 +90,8 @@ let consumers = []
 const peer = {};
 let rtpConsumer
 let webRTCTransport = []
+let rtpTransports = []
+let processWriteHLS = {};
 let streamTransport;
 let consumer;
 const mediaCodecs = [
@@ -124,11 +161,15 @@ const createPlain = async () => {
 
 router = createWorker()
 const getProducer = (channelSlug) => {
-  return producers.find(item => item.slug === channelSlug).producer
+  return producers.find(item => item.slug === channelSlug)
 }
 
 peers.on('connection', async socket => {
   socket.on('disconnect', () => {
+    if(processWriteHLS[socket.id]) {
+      processWriteHLS[socket.id].kill()
+      delete processWriteHLS[socket.id]
+    }
     webRTCTransport = webRTCTransport.filter(item => item.id === socket.id);
     console.log('peer disconnected')
   })
@@ -268,32 +309,37 @@ peers.on('connection', async socket => {
       },
       appData: {},
     });
+    const isPlay = producers.find(item => item.slug === data.slug) 
     const existsIndex = producers.findIndex(item => item.id === data.id);
     if (existsIndex !== -1) {
         producers[existsIndex].producer = producer;
     } else {
-      producers.push({ channelName: data.channelName, slug: data.slug, id: data.id, producer });
+      producers.push({ 
+        channelName: data.channelName, 
+        slug: data.slug, id: data.id, 
+        producer, 
+        socketId: socket.id 
+      });
     }
     
     callback(streamTransport.tuple.localPort)
+    if(!isPlay) {
+      startRecord(producer, data.slug, socket.id)
+    } 
   })
-
-  socket.on('recive-producer-audio', async (data) => {
-    startRecord(peer)
-  })
-
 })
 
 setInterval(async () => {
   let countDelete = 0;
   const promises = [];
-
+  const producerFails = [];
   producers.forEach(item => {
   if (item.producer) {
     promises.push(item.producer.getStats().then(stats => {
       if (stats[0]?.bitrate === 0) {
         item.isDelete = true;
         countDelete += 1;
+        producerFails.push(item.slug)
         peers.to(item.slug).emit('reconnect');
       }
     }));
@@ -304,6 +350,14 @@ setInterval(async () => {
   .then(() => {
     if (countDelete > 0) {
       producers = producers.filter(producer => producer.isDelete !== true);
+    }
+    if(producerFails.length > 0) {
+      producerFails.forEach(item => {
+        const data = getProducer(item)
+        if(data) {
+          startRecord(data.producer, item, data.socketId)
+        }
+      })
     }
   })
   
@@ -355,25 +409,19 @@ const createWebRtcTransport = async (callback) => {
   }
 }
 
-const startRecord = async (peer, channelSlug) => {
-  const producer = getProducer(channelSlug)
-  let recordInfo = await publishProducerRtpStream(peer, producer);
+const startRecord = async (producer, channelSlug, socketId) => {
+  let recordInfo = await publishProducerRtpStream(producer);
 
-  recordInfo.fileName = Date.now().toString() + "p";
+  recordInfo.fileName = channelSlug + "-hls";
   const options = {
     "rtpParameters": recordInfo,
     "format": "hls"
   }
-  peer.process = new FFmpeg(options);
-
-  setTimeout(async () => {
-    rtpConsumer.resume();
-    rtpConsumer.requestKeyFrame();
-  }, 1000);
+  processWriteHLS[socketId] = new FFmpeg(options);
 
 };
 
-const publishProducerRtpStream = async (peer, producer, ffmpegRtpCapabilities) => {
+const publishProducerRtpStream = async (producer) => {
   const rtpTransportConfig = config.plainRtpTransport;
 
   const rtpTransport = await router.createPlainTransport(rtpTransportConfig)
@@ -400,11 +448,16 @@ const publishProducerRtpStream = async (peer, producer, ffmpegRtpCapabilities) =
     rtcpFeedback: []
   };
 
-  rtpConsumer = await rtpTransport.consume({
+  const rtpConsumer = await rtpTransport.consume({
     producerId: producer.id,
     rtpCapabilities,
     paused: true
   });
+
+  setTimeout(async () => {
+    rtpConsumer.resume();
+    rtpConsumer.requestKeyFrame();
+  }, 1000);
 
   return {
     remoteRtpPort,
