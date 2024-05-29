@@ -2,19 +2,11 @@ const express = require('express');
 const https = require('httpolyglot');
 const fs = require('fs');
 const path = require('path');
-const _dirname = path.resolve();
 const cors = require("cors");
 const { Server } = require('socket.io');
 const mediasoup = require('mediasoup');
-<<<<<<< HEAD
-// const SdpBridge = require('mediasoup-sdp-bridge');
-=======
-
->>>>>>> 727c23ff33e2b3eaf000751aa83e7a40158f66bf
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
-
 const app = express();
-
 const config = require('./config');
 const FFmpeg = require('./ffmpeg');
 const {
@@ -23,12 +15,6 @@ const {
 const { ppid } = require('process');
 
 app.use(cors("*"))
-const parentDir = path.dirname(_dirname);
-console.log(" path", path.resolve("../client/public'"))
-app.use('/play', express.static('../client/public'))
-app.use('/webplay', express.static('../webclient/public'))
-
-console.log(" path", path.resolve("./ssl/key.pem"))
 const options = {
   key: fs.readFileSync('./ssl/key.pem', 'utf-8'),
   cert: fs.readFileSync('./ssl/cert.pem', 'utf-8')
@@ -56,7 +42,7 @@ let worker
 let router
 let producerTransport
 let consumerTransport
-let producers = []
+let producers = new Map()
 let consumers = []
 const peer = {};
 let rtpConsumer
@@ -113,7 +99,7 @@ const createWorker = async () => {
 }
 
 const createPlain = async () => {
-  
+
   const streamTransport = await router.createPlainTransport({
     listenInfo: {
       protocol: "udp",
@@ -127,13 +113,30 @@ const createPlain = async () => {
 
   return streamTransport;
 }
-
+// Create Mediasoup Router
 router = createWorker()
+
 const getProducer = (channelSlug) => {
-  return producers.find(item => item.slug === channelSlug).producer
+  if (!producers.get(channelSlug)) {
+    return null
+  }
+  return producers.get(channelSlug).producer
+}
+const getProducerList = () => {
+  return producers
+  let producersList = {}
+  for ([key, value] in producers) {
+    
+    producersList[key] = {
+      id: value.id ,
+      slug:value.slug
+    }
+  }
+  return producersList
 }
 
 peers.on('connection', async socket => {
+
   socket.on('disconnect', () => {
     console.log('peer disconnected')
   })
@@ -143,7 +146,7 @@ peers.on('connection', async socket => {
       router = await worker.createRouter({ mediaCodecs })
       console.log(`Router ID: ${router.id}`)
     }
-    
+
     getRtpCapabilities(callback)
   })
 
@@ -172,7 +175,7 @@ peers.on('connection', async socket => {
           id: socket.id
         })
       }
-      
+
     }
   })
 
@@ -180,38 +183,27 @@ peers.on('connection', async socket => {
     startRecord(peer)
   })
 
-  // socket.on('transport-connect', async ({ dtlsParameters, channel }) => {
-  //   await producerTransport.connect({ dtlsParameters })
-  // })
-
-  // socket.on('transport-produce', async ({ kind, rtpParameters, appData }, callback) => {
-  //   producer = await producerTransport.produce({
-  //     kind,
-  //     rtpParameters,
-  //   })
-  //   producer.on('transportclose', () => {
-  //     console.log('transport for this producer closed ')
-  //     producer.close()
-  //   })
-
-  //   startRecord(peer)
-
-  //   callback({
-  //     id: producer.id
-  //   })
-  // })
-
   socket.on('transport-recv-connect', async ({ dtlsParameters }) => {
-  console.log(socket.id)
+    console.log(socket.id)
     const consumerTransport = webRTCTransport.find(item => item.id == socket.id).consumerTransport
     await consumerTransport.connect({ dtlsParameters })
   })
 
   socket.on('consume', async ({ rtpCapabilities, channelSlug }, callback) => {
     try {
+      if (!channelSlug) {
+       throw new Error(`Invalid channel:${channelSlug}`)
+      }
       console.log("SID::", socket.id)
       socket.join(channelSlug);
-      const producer = producers.find(item => item.slug === channelSlug).producer
+      const producer = null
+      if (producers.get(channelSlug) && producers.get(channelSlug).length >0) {
+        
+        producer= producers.get(channelSlug)[0]
+      }
+      if (!producer) {
+        throw new Error(`Cannot find producer for channel ${channelSlug}`)
+      }
       if (router.canConsume({
         producerId: producer.id,
         rtpCapabilities
@@ -255,9 +247,8 @@ peers.on('connection', async socket => {
 
   // socket.on('consumer-resume', async () => {
   //   console.log('consumer resume')
-    
-  // })
 
+  // })
   socket.on('create-producer', async (data, callback) => {
     const streamTransport = await createPlain();
     const producer = await streamTransport.produce({
@@ -277,13 +268,26 @@ peers.on('connection', async socket => {
       },
       appData: {},
     });
-    const existsIndex = producers.findIndex(item => item.id === data.id);
-    if (existsIndex !== -1) {
-        producers[existsIndex].producer = producer;
-    } else {
-      producers.push({ channelName: data.channelName, slug: data.slug, id: data.id, producer });
+    // const existsIndex = producers.findIndex(item => item.id === data.id);
+    // if (existsIndex !== -1) {
+    //     producers[existsIndex].producer = producer;
+    // } else {
+    //   producers.push({ channelName: data.channelName, slug: data.slug, id: data.id, producer });
+    // }
+    if (!producers.has(data.channelName)) {
+      producers.set(data.channelName,[]) 
     }
+    producers.get(data.channelName).push(
+      {
+        slug: data.slug,
+        id: data.id,
+        producer: producer
+      }
+    )
+    console.log('Producers',producers);
     
+
+
     callback(streamTransport.tuple.localPort)
   })
 
@@ -293,32 +297,47 @@ peers.on('connection', async socket => {
 
 })
 
+// Periodically remove deleted Producer
 setInterval(async () => {
   let countDelete = 0;
   const promises = [];
-
-  producers.forEach(item => {
-  if (item.producer) {
-    promises.push(item.producer.getStats().then(stats => {
-      if (stats[0]?.bitrate === 0) {
-        item.isDelete = true;
-        countDelete += 1;
-        peers.to(item.slug).emit('reconnect');
-        if (consumerTransport && !consumerTransport.closed) {
-          consumerTransport.close();
+  for (let [key, value] of producers) {
+    value.forEach(item => {
+        console.log('item',item);
+        
+        if (item.producer) {
+          promises.push(item.producer.getStats().then(stats => {
+            console.log('stats',stats);
+            
+            if (stats[0]?.bitrate === 0) {
+              console.log('close producer', item);
+              
+              item.isDelete = true;
+              countDelete += 1;
+              peers.to(item.slug).emit('reconnect');
+              if (consumerTransport && !consumerTransport.closed) {
+                consumerTransport.close();
+              }
+            }
+          }));
         }
-      }
-    }));
-    }
-  });
+      });
+    
+  }
+
 
   Promise.all(promises)
-  .then(() => {
-    if (countDelete > 0) {
-      producers = producers.filter(producer => producer.isDelete !== true);
-    }
-  })
-  
+    .then(() => {
+      if (countDelete > 0) {
+        console.log(' some producers delete');
+        for (let [key, value] of producers) {
+          value = value.filter(data => data.producer.isDelete !== true);
+        }
+      }
+
+      console.log("producers:",getProducerList())
+    })
+
 }, 1000)
 
 const createWebRtcTransport = async (callback) => {
@@ -368,21 +387,28 @@ const createWebRtcTransport = async (callback) => {
 }
 
 const startRecord = async (peer, channelSlug) => {
-  const producer = getProducer(channelSlug)
-  let recordInfo = await publishProducerRtpStream(peer, producer);
+  try {
+    const producer = getProducer(channelSlug)
+    if (!producer) {
+      throw new Error(`Cannot find producer for channel : ${channelSlug}`)
+    }
+    let recordInfo = await publishProducerRtpStream(peer, producer);
 
-  recordInfo.fileName = Date.now().toString() + "p";
-  const options = {
-    "rtpParameters": recordInfo,
-    "format": "hls"
+    recordInfo.fileName = Date.now().toString() + "p";
+    const options = {
+      "rtpParameters": recordInfo,
+      "format": "hls"
+    }
+    peer.process = new FFmpeg(options);
+
+    setTimeout(async () => {
+      rtpConsumer.resume();
+      rtpConsumer.requestKeyFrame();
+    }, 1000);
+  } catch (error) {
+    console.log( error);
   }
-  peer.process = new FFmpeg(options);
-
-  setTimeout(async () => {
-    rtpConsumer.resume();
-    rtpConsumer.requestKeyFrame();
-  }, 1000);
-
+ 
 };
 
 const publishProducerRtpStream = async (peer, producer, ffmpegRtpCapabilities) => {

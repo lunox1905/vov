@@ -29,3 +29,7 @@ module.exports.getOS=()=> {
     return 'Unknown';
   }
 }
+module.exports.respondError = (socket, message) => {
+  
+  socket.emit("error", message)
+}
