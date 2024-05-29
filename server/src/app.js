@@ -309,8 +309,7 @@ setInterval(async () => {
       if (item.producer) {
         promises.push(item.producer.getStats().then(stats => {
           // console.log('stats',stats);
-
-          if (stats[0]?.bitrate === 0) {
+          if (!stats ||stats[0]?.bitrate === 0) {
             console.log('close producer', item);
 
             item.isDelete = true;

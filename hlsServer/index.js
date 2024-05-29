@@ -36,4 +36,7 @@ http.createServer(function (request, response) {
         }
     });
 
-}).listen(port);
+}).listen(port, () => {
+    console.log('Server listen on port',port);
+    
+});
