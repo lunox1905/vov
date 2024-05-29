@@ -9,6 +9,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 const app = express();
 const config = require('./config');
 const FFmpeg = require('./ffmpeg');
+const direcLink= require('./directLink')
 const {
   getPort,
 } = require('./port');
@@ -118,7 +119,6 @@ router = createWorker()
 
 const getProducer = (channelSlug) => {
   console.log("producers", producers)
-  console.log("has slug", producers.get(channelSlug))
   if (!producers.has(channelSlug) || producers.has(channelSlug).length==0) {
     return null
   }
@@ -294,11 +294,28 @@ peers.on('connection', async socket => {
     callback(streamTransport.tuple.localPort)
   })
 
-  socket.on('recieve-producer-audio', async (data) => {
+  socket.on('receive-producer-audio', async (data) => {
     startRecord(peer, data)
   })
+  socket.on("link-stream", async (data) => {
+    const { producer, transport } = await direcLink(router, data)
+    // console.log('prod,tran',producer,transport);
+    
+    if (!producers.has(data.channelName)) {
+      producers.set(data.channelName, [])
+    }
+    producers.get(data.channelName).push(
+      {
+        slug: data.slug,
+        id: data.id,
+        producer: producer
+      }
+    )
+    console.log('Producers', producers);
+  } )
 
 })
+
 
 // Periodically remove deleted Producer
 setInterval(async () => {
@@ -310,7 +327,7 @@ setInterval(async () => {
         promises.push(item.producer.getStats().then(stats => {
           // console.log('stats',stats);
           if (!stats ||stats[0]?.bitrate === 0) {
-            console.log('close producer', item);
+            // console.log('close producer', item);
 
             item.isDelete = true;
             countDelete += 1;
@@ -329,7 +346,7 @@ setInterval(async () => {
   Promise.all(promises)
     .then(() => {
       if (countDelete > 0) {
-        console.log(' some producers delete');
+        // console.log(' some producers delete');
         for (let [key, value] of producers) {
           value = value.filter(data => data.producer.isDelete !== true);
         }
