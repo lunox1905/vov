@@ -129,6 +129,7 @@ const getProducer = (channelSlug) => {
 
 peers.on('connection', async socket => {
   socket.on('disconnect', () => {
+    webRTCTransport = webRTCTransport.filter(item => item.id === socket.id);
     console.log('peer disconnected')
   })
 
@@ -153,10 +154,8 @@ peers.on('connection', async socket => {
       producerTransport = await createWebRtcTransport(callback)
     }
     else {
-      console.log('===========================================')
       consumerSocketId = socket.id
       consumerTransport = await createWebRtcTransport(callback)
-      console.log(socket.id)
       const existsIndex = webRTCTransport.findIndex(item => item.id === socket.id);
       if (existsIndex !== -1) {
         webRTCTransport[existsIndex].consumerTransport = consumerTransport;
@@ -166,7 +165,6 @@ peers.on('connection', async socket => {
           id: socket.id
         })
       }
-      
     }
   })
 
@@ -196,26 +194,26 @@ peers.on('connection', async socket => {
   // })
 
   socket.on('transport-recv-connect', async ({ dtlsParameters }) => {
-  console.log(socket.id)
     const consumerTransport = webRTCTransport.find(item => item.id == socket.id).consumerTransport
     await consumerTransport.connect({ dtlsParameters })
   })
 
   socket.on('consume', async ({ rtpCapabilities, channelSlug }, callback) => {
     try {
-      console.log("SID::", socket.id)
       socket.join(channelSlug);
       const producer = producers.find(item => item.slug === channelSlug).producer
       if (router.canConsume({
         producerId: producer.id,
         rtpCapabilities
       })) {
+        const consumerTransport = webRTCTransport.find(item => item.id == socket.id).consumerTransport;
+
         const consumer = await consumerTransport.consume({
           producerId: producer.id,
           rtpCapabilities,
           paused: true,
         })
-
+        
         const params = {
           id: consumer.id,
           producerId: producer.id,
@@ -223,7 +221,6 @@ peers.on('connection', async socket => {
           rtpParameters: consumer.rtpParameters,
         }
         await consumer.resume()
-
         callback({ params })
       }
     } catch (error) {
@@ -298,9 +295,6 @@ setInterval(async () => {
         item.isDelete = true;
         countDelete += 1;
         peers.to(item.slug).emit('reconnect');
-        if (consumerTransport && !consumerTransport.closed) {
-          consumerTransport.close();
-        }
       }
     }));
     }
