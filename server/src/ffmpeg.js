@@ -3,10 +3,9 @@ const { EventEmitter } = require('events');
 const { createSdpText } = require('./sdp.js');
 const { convertStringToStream ,getOS} = require('./utils.js');
 const path = require("path")
+const Logger = require('./logger.js')
 const fs = require('fs');
-
 // console.log('path', path.resolve('../files'));
-
 const RECORD_FILE_LOCATION_PATH = process.env.RECORD_FILE_LOCATION_PATH || path.resolve('../files');
 console.log("Save path::", RECORD_FILE_LOCATION_PATH)
 const myOS = getOS()
@@ -17,7 +16,7 @@ module.exports = class FFmpeg {
     this._rtpParameters = rtpParameters;
     this._process = null;
     this._observer = new EventEmitter();
-
+    this.Logger = new Logger(`log.txt`).getlog()
     this.formats = {
       "mp3": this._audioArgs,
       "hls": this._hlsArgs
@@ -39,7 +38,8 @@ module.exports = class FFmpeg {
       this._process.stderr.setEncoding('utf-8');
 
       this._process.stderr.on('data', data =>
-        console.log('ffmpeg::process::data [data:%o]', data)
+        // console.log('ffmpeg::process::data [data:%o]', data)
+        {  this.Logger.error(`ffmpeg ${data}`)}
       );
     }
 
@@ -47,10 +47,10 @@ module.exports = class FFmpeg {
       this._process.stdout.setEncoding('utf-8');
 
       this._process.stdout.on('data', data =>
-        console.log('ffmpeg::process::data [data:%o]', data)
+        // console.log('ffmpeg::process::data [data:%o]', data)
+        { this.Logger.info(`data ${data}`) }
       );
     }
-
     this._process.on('message', message =>
       console.log('ffmpeg::process::message [message:%o]', message)
     );
