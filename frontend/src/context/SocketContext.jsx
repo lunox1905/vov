@@ -2,7 +2,6 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import io from 'socket.io-client';
 import mediasoupClient from "mediasoup-client"
 const SocketContext = createContext();
-
 export const useSocket = () => {
     return useContext(SocketContext);
 };
@@ -13,9 +12,7 @@ export const SocketProvider = ({ children }) => {
 
     useEffect(() => {
         const newSocket = io(SERVER_URL); // Adjust the URL as necessary
-        newSocket.on('connection-success', ({ socketId, existsProducer }) => {
-            console.log(socketId, existsProducer)
-        })
+       
         setSocket(newSocket);
 
         return () => newSocket.close();

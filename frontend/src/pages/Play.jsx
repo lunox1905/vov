@@ -139,15 +139,11 @@ export const Play = () => {
 
         })
     }
-
     const stopStream = () => {
         msgSpan.innerHTML = "Stop streaming ..."
         socket.emit("closeAll")
         console.log('finished stopStream');
-
-
     }
-
     return (
         <>
             <div className="flex flex-col">

@@ -1,8 +1,10 @@
 import React from 'react';
 import { Outlet, Link } from 'react-router-dom';
+import { VerticalNav } from '../components/VerticalNav';
 function Layout() {
     return (
-        <div>
+        <div className='flex'>
+            <VerticalNav/>
             <Outlet />
         </div>
     );

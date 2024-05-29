@@ -9,8 +9,8 @@ export const Listen = () => {
         if (socket) {
             socket.on('connect', () => {
                 console.log('Connected to socket server');
-            });
 
+            });
             // Cleanup on unmount
             return () => {
                 socket.off('connect');
@@ -34,7 +34,13 @@ export const Listen = () => {
     const goConsume = () => {
         device === undefined ? getRtpCapabilities() : createRecvTransport()
     }
-
+    const getRtpCapabilities = () => {
+        console.log('stage1');
+        socket.emit('createRoom', (data) => {
+            rtpCapabilities = data.rtpCapabilities
+            createDevice()
+        })
+    }
     const createDevice = async () => {
         console.log('stage2');
 
@@ -53,13 +59,7 @@ export const Listen = () => {
         }
     }
 
-    const getRtpCapabilities = () => {
-        console.log('stage1');
-        socket.emit('createRoom', (data) => {
-            rtpCapabilities = data.rtpCapabilities
-            createDevice()
-        })
-    }
+    
 
     const createRecvTransport = async () => {
         console.log('stage3');
@@ -92,6 +92,7 @@ export const Listen = () => {
         console.log('stage4');
         await socket.emit('consume', {
             rtpCapabilities: device.rtpCapabilities,
+            channelSlug:"slug"
         }, async ({ params }) => {
 
             if (params.error) {

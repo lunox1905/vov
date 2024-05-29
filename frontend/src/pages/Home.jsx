@@ -3,7 +3,7 @@ import { Listen } from "./Listen";
 export const Home = () => {
     return (
         <>
-            <Listen />
+       
             
         </>
     )

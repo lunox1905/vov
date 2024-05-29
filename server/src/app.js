@@ -117,19 +117,22 @@ const createPlain = async () => {
 router = createWorker()
 
 const getProducer = (channelSlug) => {
-  if (!producers.get(channelSlug)) {
+  console.log("producers", producers)
+  console.log("has slug", producers.get(channelSlug))
+  if (!producers.has(channelSlug) || producers.has(channelSlug).length==0) {
     return null
   }
-  return producers.get(channelSlug).producer
+  return producers.get(channelSlug)[0].producer
 }
+
 const getProducerList = () => {
   return producers
   let producersList = {}
   for ([key, value] in producers) {
-    
+
     producersList[key] = {
-      id: value.id ,
-      slug:value.slug
+      id: value.id,
+      slug: value.slug
     }
   }
   return producersList
@@ -192,14 +195,14 @@ peers.on('connection', async socket => {
   socket.on('consume', async ({ rtpCapabilities, channelSlug }, callback) => {
     try {
       if (!channelSlug) {
-       throw new Error(`Invalid channel:${channelSlug}`)
+        throw new Error(`Invalid channel:${channelSlug}`)
       }
       console.log("SID::", socket.id)
       socket.join(channelSlug);
       const producer = null
-      if (producers.get(channelSlug) && producers.get(channelSlug).length >0) {
-        
-        producer= producers.get(channelSlug)[0]
+      if (producers.get(channelSlug) && producers.get(channelSlug).length > 0) {
+
+        producer = producers.get(channelSlug)[0]
       }
       if (!producer) {
         throw new Error(`Cannot find producer for channel ${channelSlug}`)
@@ -275,7 +278,7 @@ peers.on('connection', async socket => {
     //   producers.push({ channelName: data.channelName, slug: data.slug, id: data.id, producer });
     // }
     if (!producers.has(data.channelName)) {
-      producers.set(data.channelName,[]) 
+      producers.set(data.channelName, [])
     }
     producers.get(data.channelName).push(
       {
@@ -284,15 +287,15 @@ peers.on('connection', async socket => {
         producer: producer
       }
     )
-    console.log('Producers',producers);
-    
+    console.log('Producers', producers);
+
 
 
     callback(streamTransport.tuple.localPort)
   })
 
-  socket.on('recive-producer-audio', async (data) => {
-    startRecord(peer)
+  socket.on('recieve-producer-audio', async (data) => {
+    startRecord(peer, data)
   })
 
 })
@@ -303,26 +306,24 @@ setInterval(async () => {
   const promises = [];
   for (let [key, value] of producers) {
     value.forEach(item => {
-        console.log('item',item);
-        
-        if (item.producer) {
-          promises.push(item.producer.getStats().then(stats => {
-            console.log('stats',stats);
-            
-            if (stats[0]?.bitrate === 0) {
-              console.log('close producer', item);
-              
-              item.isDelete = true;
-              countDelete += 1;
-              peers.to(item.slug).emit('reconnect');
-              if (consumerTransport && !consumerTransport.closed) {
-                consumerTransport.close();
-              }
+      if (item.producer) {
+        promises.push(item.producer.getStats().then(stats => {
+          // console.log('stats',stats);
+
+          if (stats[0]?.bitrate === 0) {
+            console.log('close producer', item);
+
+            item.isDelete = true;
+            countDelete += 1;
+            peers.to(item.slug).emit('reconnect');
+            if (consumerTransport && !consumerTransport.closed) {
+              consumerTransport.close();
             }
-          }));
-        }
-      });
-    
+          }
+        }));
+      }
+    });
+
   }
 
 
@@ -335,7 +336,7 @@ setInterval(async () => {
         }
       }
 
-      console.log("producers:",getProducerList())
+      // console.log("producers:",getProducerList())
     })
 
 }, 1000)
@@ -386,11 +387,13 @@ const createWebRtcTransport = async (callback) => {
   }
 }
 
-const startRecord = async (peer, channelSlug) => {
+const startRecord = async (peer, data) => {
   try {
-    const producer = getProducer(channelSlug)
+    console.log('data', data);
+
+    const producer = getProducer(data.channelSlug)
     if (!producer) {
-      throw new Error(`Cannot find producer for channel : ${channelSlug}`)
+      throw new Error(`Cannot find producer for channel : ${data.channelSlug}`)
     }
     let recordInfo = await publishProducerRtpStream(peer, producer);
 
@@ -406,9 +409,9 @@ const startRecord = async (peer, channelSlug) => {
       rtpConsumer.requestKeyFrame();
     }, 1000);
   } catch (error) {
-    console.log( error);
+    console.log(error);
   }
- 
+
 };
 
 const publishProducerRtpStream = async (peer, producer, ffmpegRtpCapabilities) => {

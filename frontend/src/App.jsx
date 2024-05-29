@@ -12,6 +12,7 @@ import "react-toastify/dist/ReactToastify.css";
 import Layout from './views/Layout';
 import { Play } from './pages/Play';
 import { SocketProvider } from './context/SocketContext';
+import { Listen } from './pages/Listen';
 function App() {
 
 
@@ -20,7 +21,8 @@ function App() {
 
       <Route path='/' element={<Layout />}>
         <Route index element={<Home />} />
-        <Route path="/play" element={<Play/>} />
+        <Route path="/play" element={<Play />} />
+        <Route path='/listen' element={<Listen/>} />
       </Route>
     )
   )

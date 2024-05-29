@@ -109,9 +109,3 @@ dist
 
 # TernJS port file
 .tern-port
-<<<<<<< HEAD
-=======
-
-webclient
-server/files/*
->>>>>>> 387388ad805bff4de16da83adbab0f3d8a8e1b6f
