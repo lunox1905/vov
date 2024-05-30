@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import { useEffect ,useRef} from "react";
 import { useSocket } from "../context/SocketContext";
 import * as mediasoupClient from "mediasoup-client"
 export const Listen = () => {
     const socket = useSocket();
     const audioRef = useRef(null);
+    const [ channelSlug, setChanelSlug ] = useState('')
     useEffect(() => {
         if (socket) {
             socket.on('connect', () => {
@@ -31,7 +32,8 @@ export const Listen = () => {
     //     video.src = ''
     // })
 
-    const goConsume = () => {
+    const goConsume = (channelSlug) => {
+        setChanelSlug(channelSlug)
         device === undefined ? getRtpCapabilities() : createRecvTransport()
     }
     const getRtpCapabilities = () => {
@@ -90,9 +92,10 @@ export const Listen = () => {
 
     const connectRecvTransport = async () => {
         console.log('stage4');
+        console.log(channelSlug)
         await socket.emit('consume', {
             rtpCapabilities: device.rtpCapabilities,
-            channelSlug:"slug"
+            channelSlug: channelSlug
         }, async ({ params }) => {
 
             if (params.error) {
@@ -113,7 +116,7 @@ export const Listen = () => {
             let audiostream = new MediaStream([track])
             audioRef.srcObject = audiostream
             // await saveStream(audiostream)
-            socket.emit('consumer-resume')
+            // socket.emit('consumer-resume')
         })
     }
 
@@ -127,7 +130,7 @@ export const Listen = () => {
             </div>
     
             <div id="sharedBtns">
-                <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onClick={goConsume}>Nghe</button>
+                <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onClick={() => goConsume('kenh1')}>Nghe kênh 1</button>
             </div>
            </div>
         </>
