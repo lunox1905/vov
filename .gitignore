@@ -6,6 +6,8 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 
+logs/*
+
 # keys 
 ssl/*
 files/mp3/*
@@ -107,6 +109,3 @@ dist
 
 # TernJS port file
 .tern-port
-
-webclient
-server/files/*

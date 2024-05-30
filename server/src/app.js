@@ -2,24 +2,20 @@ const express = require('express');
 const https = require('httpolyglot');
 const fs = require('fs');
 const path = require('path');
-const _dirname = path.resolve();
 const cors = require("cors");
 const { Server } = require('socket.io');
 const mediasoup = require('mediasoup');
-
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
-
 const app = express();
-
 const config = require('./config');
 const FFmpeg = require('./ffmpeg');
+const direcLink= require('./directLink')
 const {
   getPort,
 } = require('./port');
 const { ppid } = require('process');
 
 app.use(cors("*"))
-const parentDir = path.dirname(_dirname);
 app.use('/play', express.static('../../client/public'))
 app.use('/webplay', express.static('../webclient/src'))
 
@@ -59,8 +55,8 @@ app.use('/playhls', (request, response) => {
 })
 
 const options = {
-  key: fs.readFileSync('../ssl/key.pem', 'utf-8'),
-  cert: fs.readFileSync('../ssl/cert.pem', 'utf-8')
+  key: fs.readFileSync('./ssl/key.pem', 'utf-8'),
+  cert: fs.readFileSync('./ssl/cert.pem', 'utf-8')
 }
 
 const httpsServer = https.createServer(options, app)
@@ -85,7 +81,7 @@ let worker
 let router
 let producerTransport
 let consumerTransport
-let producers = []
+let producers = new Map()
 let consumers = []
 const peer = {};
 let rtpConsumer
@@ -94,6 +90,7 @@ let rtpTransports = []
 let processWriteHLS = {};
 let streamTransport;
 let consumer;
+let v;
 const mediaCodecs = [
   {
     kind: 'audio',
@@ -144,7 +141,7 @@ const createWorker = async () => {
 }
 
 const createPlain = async () => {
-  
+
   const streamTransport = await router.createPlainTransport({
     listenInfo: {
       protocol: "udp",
@@ -158,13 +155,33 @@ const createPlain = async () => {
 
   return streamTransport;
 }
-
+// Create Mediasoup Router
 router = createWorker()
+
 const getProducer = (channelSlug) => {
-  return producers.find(item => item.slug === channelSlug)
+  // return producers.find(item => item.slug === channelSlug)
+  console.log("producers", producers)
+  if (!producers.has(channelSlug) || producers.has(channelSlug).length==0) {
+    return null
+  }
+  return producers.get(channelSlug)[0].producer
 }
 
+// const getProducerList = () => {
+//   return producers
+//   let producersList = {}
+//   for ([key, value] in producers) {
+
+//     producersList[key] = {
+//       id: value.id,
+//       slug: value.slug
+//     }
+//   }
+//   return producersList
+// }
+
 peers.on('connection', async socket => {
+
   socket.on('disconnect', () => {
     if(processWriteHLS[socket.id]) {
       processWriteHLS[socket.id].kill()
@@ -179,7 +196,7 @@ peers.on('connection', async socket => {
       router = await worker.createRouter({ mediaCodecs })
       console.log(`Router ID: ${router.id}`)
     }
-    
+
     getRtpCapabilities(callback)
   })
 
@@ -197,6 +214,7 @@ peers.on('connection', async socket => {
     else {
       consumerSocketId = socket.id
       consumerTransport = await createWebRtcTransport(callback)
+      v = consumerTransport
       const existsIndex = webRTCTransport.findIndex(item => item.id === socket.id);
       if (existsIndex !== -1) {
         webRTCTransport[existsIndex].consumerTransport = consumerTransport;
@@ -209,29 +227,8 @@ peers.on('connection', async socket => {
     }
   })
 
-  socket.on('record', async () => {
-    startRecord(peer)
-  })
-
-  // socket.on('transport-connect', async ({ dtlsParameters, channel }) => {
-  //   await producerTransport.connect({ dtlsParameters })
-  // })
-
-  // socket.on('transport-produce', async ({ kind, rtpParameters, appData }, callback) => {
-  //   producer = await producerTransport.produce({
-  //     kind,
-  //     rtpParameters,
-  //   })
-  //   producer.on('transportclose', () => {
-  //     console.log('transport for this producer closed ')
-  //     producer.close()
-  //   })
-
+  // socket.on('record', async () => {
   //   startRecord(peer)
-
-  //   callback({
-  //     id: producer.id
-  //   })
   // })
 
   socket.on('transport-recv-connect', async ({ dtlsParameters }) => {
@@ -241,14 +238,24 @@ peers.on('connection', async socket => {
 
   socket.on('consume', async ({ rtpCapabilities, channelSlug }, callback) => {
     try {
+      if (!channelSlug) {
+        throw new Error(`Invalid channel:${channelSlug}`)
+      }
+      console.log("SID::", socket.id)
       socket.join(channelSlug);
-      const producer = producers.find(item => item.slug === channelSlug).producer
+      let producer;
+      if (producers.get(channelSlug) && producers.get(channelSlug).length > 0) {
+        producer = producers.get(channelSlug)[0].producer;
+      }
+      console.log("===============", producer)
+      if (!producer) {
+        throw new Error(`Cannot find producer for channel ${channelSlug}`)
+      }
       if (router.canConsume({
         producerId: producer.id,
         rtpCapabilities
       })) {
-        const consumerTransport = webRTCTransport.find(item => item.id == socket.id).consumerTransport;
-
+        // const consumerTransport = webRTCTransport.find(item => item.id == socket.id).consumerTransport;
         const consumer = await consumerTransport.consume({
           producerId: producer.id,
           rtpCapabilities,
@@ -287,9 +294,8 @@ peers.on('connection', async socket => {
 
   // socket.on('consumer-resume', async () => {
   //   console.log('consumer resume')
-    
-  // })
 
+  // })
   socket.on('create-producer', async (data, callback) => {
     const streamTransport = await createPlain();
     const producer = await streamTransport.produce({
@@ -309,47 +315,93 @@ peers.on('connection', async socket => {
       },
       appData: {},
     });
-    const isPlay = producers.find(item => item.slug === data.slug) 
-    const existsIndex = producers.findIndex(item => item.id === data.id);
-    if (existsIndex !== -1) {
-        producers[existsIndex].producer = producer;
-    } else {
-      producers.push({ 
-        channelName: data.channelName, 
-        slug: data.slug, id: data.id, 
-        producer, 
-        socketId: socket.id 
-      });
-    }
-    
-    callback(streamTransport.tuple.localPort)
-    if(!isPlay) {
+    // const isPlay = producers.find(item => item.slug === data.slug) 
+    // const existsIndex = producers.findIndex(item => item.id === data.id);
+    // if (existsIndex !== -1) {
+    //     producers[existsIndex].producer = producer;
+    // } else {
+    //   producers.push({ channelName: data.channelName, slug: data.slug, id: data.id, producer });
+    // }
+    if (!producers.has(data.slug)) {
+      producers.set(data.slug, [])
       startRecord(producer, data.slug, socket.id)
-    } 
+    }
+    producers.get(data.slug).push(
+      {
+        slug: data.slug,
+        id: data.id,
+        producer: producer
+      }
+    )
+    console.log('Producers', producers);
+
+
+
+    callback(streamTransport.tuple.localPort)
+    // if(!isPlay) {
+    //   startRecord(producer, data.slug, socket.id)
+    // } 
   })
+
+  // socket.on('receive-producer-audio', async (data) => {
+  //   startRecord(peer, data)
+  // })
+  socket.on("link-stream", async (data) => {
+    const { producer, transport } = await direcLink(router, data)
+    // console.log('prod,tran',producer,transport);
+    
+    if (!producers.has(data.channelName)) {
+      producers.set(data.channelName, [])
+    }
+    producers.get(data.channelName).push(
+      {
+        slug: data.slug,
+        id: data.id,
+        producer: producer
+      }
+    )
+    console.log('Producers', producers);
+  } )
+
 })
 
+
+// Periodically remove deleted Producer
 setInterval(async () => {
   let countDelete = 0;
   const promises = [];
   const producerFails = [];
-  producers.forEach(item => {
-  if (item.producer) {
-    promises.push(item.producer.getStats().then(stats => {
-      if (stats[0]?.bitrate === 0) {
-        item.isDelete = true;
-        countDelete += 1;
-        producerFails.push(item.slug)
-        peers.to(item.slug).emit('reconnect');
+  for (let [key, value] of producers) {
+    value.forEach(item => {
+      if (item.producer) {
+        promises.push(item.producer.getStats().then(stats => {
+          // console.log('stats',stats);
+          if (!stats ||stats[0]?.bitrate === 0) {
+            // console.log('close producer', item);
+
+            item.isDelete = true;
+            countDelete += 1;
+            producerFails.push(item.slug)
+            peers.to(item.slug).emit('reconnect');
+            if (consumerTransport && !consumerTransport.closed) {
+              consumerTransport.close();
+            }
+          }
+        }));
       }
-    }));
-    }
-  });
+    });
+
+  }
+
 
   Promise.all(promises)
   .then(() => {
     if (countDelete > 0) {
-      producers = producers.filter(producer => producer.isDelete !== true);
+      // producers = producers.filter(producer => producer.isDelete !== true);
+
+      for (let [key, value] of producers) {
+        value = value.filter(data => data.producer.isDelete !== true);
+      }
     }
     if(producerFails.length > 0) {
       producerFails.forEach(item => {
@@ -360,8 +412,9 @@ setInterval(async () => {
       })
     }
   })
-  
+
 }, 1000)
+
 
 const createWebRtcTransport = async (callback) => {
   try {
@@ -418,8 +471,7 @@ const startRecord = async (producer, channelSlug, socketId) => {
     "format": "hls"
   }
   processWriteHLS[socketId] = new FFmpeg(options);
-
-};
+}
 
 const publishProducerRtpStream = async (producer) => {
   const rtpTransportConfig = config.plainRtpTransport;
