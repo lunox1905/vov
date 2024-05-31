@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useEffect ,useRef} from "react";
 import { useSocket } from "../context/SocketContext";
 import * as mediasoupClient from "mediasoup-client"
@@ -72,10 +72,12 @@ export const Listen = () => {
                 console.log(params.error)
                 return
             }
+            console.log('1111111111111===')
             consumerTransport = device.createRecvTransport(params)
 
             consumerTransport.on('connect', async ({ dtlsParameters }, callback, errback) => {
                 try {
+                    console.log('1222222===')
                     await socket.emit('transport-recv-connect', {
                         dtlsParameters,
                     })
@@ -92,7 +94,6 @@ export const Listen = () => {
 
     const connectRecvTransport = async () => {
         console.log('stage4');
-        console.log(channelSlug)
         await socket.emit('consume', {
             rtpCapabilities: device.rtpCapabilities,
             channelSlug: channelSlug
@@ -110,29 +111,38 @@ export const Listen = () => {
                 rtpParameters: params.rtpParameters
             })
             const { track } = consumer
-            console.log("tracks", track);
-
-            // let stream = new MediaStream([track])
             let audiostream = new MediaStream([track])
-            audioRef.srcObject = audiostream
-            // await saveStream(audiostream)
-            // socket.emit('consumer-resume')
+            
+            audioRef.current.srcObject = audiostream
         })
     }
 
+    useEffect(() => {
+        socket.on('reconnect', async () => {
+            createRecvTransport()
+        })
+    }, [])
+
     return (
         <>
-        
             <div className="p-3">
                 
             <div id="sharedBtns">
-                    <audio ref={ audioRef} id="remoteVideo" autoPlay ></audio>
+                    <audio ref={audioRef} id="remoteVideo" autoPlay ></audio>
             </div>
     
             <div id="sharedBtns">
                 <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onClick={() => goConsume('kenh1')}>Nghe kênh 1</button>
             </div>
+
+            <div id="sharedBtns">
+                <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onClick={() => goConsume('kenh2')}>Nghe kênh 2</button>
+            </div>
+
+            <div id="sharedBtns">
+                <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onClick={() => goConsume('kenh3')}>Nghe kênh 3</button>
+            </div>
            </div>
         </>
-)
+    )
 }

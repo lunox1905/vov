@@ -16,7 +16,7 @@ const {
 const { ppid } = require('process');
 
 app.use(cors("*"))
-app.use('/play', express.static('../../client/public'))
+app.use('/play', express.static('../client/public'))
 app.use('/webplay', express.static('../webclient/src'))
 
 app.use('/playhls', (request, response) => {
@@ -90,7 +90,6 @@ let rtpTransports = []
 let processWriteHLS = {};
 let streamTransport;
 let consumer;
-let v;
 const mediaCodecs = [
   {
     kind: 'audio',
@@ -159,9 +158,7 @@ const createPlain = async () => {
 router = createWorker()
 
 const getProducer = (channelSlug) => {
-  // return producers.find(item => item.slug === channelSlug)
-  console.log("producers", producers)
-  if (!producers.has(channelSlug) || producers.has(channelSlug).length==0) {
+  if (!producers.has(channelSlug) || producers.get(channelSlug).length==0) {
     return null
   }
   return producers.get(channelSlug)[0].producer
@@ -214,7 +211,6 @@ peers.on('connection', async socket => {
     else {
       consumerSocketId = socket.id
       consumerTransport = await createWebRtcTransport(callback)
-      v = consumerTransport
       const existsIndex = webRTCTransport.findIndex(item => item.id === socket.id);
       if (existsIndex !== -1) {
         webRTCTransport[existsIndex].consumerTransport = consumerTransport;
@@ -232,6 +228,7 @@ peers.on('connection', async socket => {
   // })
 
   socket.on('transport-recv-connect', async ({ dtlsParameters }) => {
+    console.log("=====================================::")
     const consumerTransport = webRTCTransport.find(item => item.id == socket.id).consumerTransport
     await consumerTransport.connect({ dtlsParameters })
   })
@@ -241,13 +238,11 @@ peers.on('connection', async socket => {
       if (!channelSlug) {
         throw new Error(`Invalid channel:${channelSlug}`)
       }
-      console.log("SID::", socket.id)
       socket.join(channelSlug);
       let producer;
       if (producers.get(channelSlug) && producers.get(channelSlug).length > 0) {
         producer = producers.get(channelSlug)[0].producer;
       }
-      console.log("===============", producer)
       if (!producer) {
         throw new Error(`Cannot find producer for channel ${channelSlug}`)
       }
@@ -255,7 +250,7 @@ peers.on('connection', async socket => {
         producerId: producer.id,
         rtpCapabilities
       })) {
-        // const consumerTransport = webRTCTransport.find(item => item.id == socket.id).consumerTransport;
+        const consumerTransport = webRTCTransport.find(item => item.id == socket.id).consumerTransport;
         const consumer = await consumerTransport.consume({
           producerId: producer.id,
           rtpCapabilities,
@@ -324,7 +319,7 @@ peers.on('connection', async socket => {
     // }
     if (!producers.has(data.slug)) {
       producers.set(data.slug, [])
-      startRecord(producer, data.slug, socket.id)
+      // startRecord(producer, data.slug, socket.id)
     }
     producers.get(data.slug).push(
       {
@@ -400,14 +395,15 @@ setInterval(async () => {
       // producers = producers.filter(producer => producer.isDelete !== true);
 
       for (let [key, value] of producers) {
-        value = value.filter(data => data.producer.isDelete !== true);
+        const newValue = value.filter(data => data.isDelete !== true);
+        producers.set(key, newValue);
       }
     }
     if(producerFails.length > 0) {
       producerFails.forEach(item => {
         const data = getProducer(item)
         if(data) {
-          startRecord(data.producer, item, data.socketId)
+          // startRecord(data.producer, item, data.socketId)
         }
       })
     }
