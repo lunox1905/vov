@@ -9,7 +9,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 const app = express();
 const config = require('./config');
 const FFmpeg = require('./ffmpeg');
-const direcLink= require('./directLink')
+const direcLink = require('./directLink')
 const {
   getPort,
 } = require('./port');
@@ -21,37 +21,37 @@ app.use('/webplay', express.static('../webclient/src'))
 
 app.use('/playhls', (request, response) => {
   const url = request.url.substring(request.url.lastIndexOf('/') + 1);
-    const base = path.basename(url, path.extname(url))
-    const extractBase = base.substring(0, base.indexOf('-hls') + 4);
-    let filePath = ""
-    var filePathOption1 = path.resolve(`../files/hls/${base}/${url}`);
-    var filePathOption2 = path.resolve(`../files/hls/${extractBase}/${url}`)
+  const base = path.basename(url, path.extname(url))
+  const extractBase = base.substring(0, base.indexOf('-hls') + 4);
+  let filePath = ""
+  var filePathOption1 = path.resolve(`../files/hls/${base}/${url}`);
+  var filePathOption2 = path.resolve(`../files/hls/${extractBase}/${url}`)
 
-    if (fs.existsSync(filePathOption1)) {
-        filePath = filePathOption1
+  if (fs.existsSync(filePathOption1)) {
+    filePath = filePathOption1
+  }
+  else {
+    filePath = filePathOption2
+  }
+
+  fs.readFile(filePath, function (error, content) {
+    response.writeHead(200, { 'Access-Control-Allow-Origin': '*' });
+    if (error) {
+      if (error.code == 'ENOENT') {
+        fs.readFile('./404.html', function (error, content) {
+          response.end(content, 'utf-8');
+        });
+      }
+      else {
+        response.writeHead(500);
+        response.end(' error: ' + error.code + ' ..\n');
+        response.end();
+      }
     }
     else {
-        filePath = filePathOption2
+      response.end(content, 'utf-8');
     }
-
-    fs.readFile(filePath, function (error, content) {
-        response.writeHead(200, { 'Access-Control-Allow-Origin': '*' });
-        if (error) {
-            if (error.code == 'ENOENT') {
-                fs.readFile('./404.html', function (error, content) {
-                    response.end(content, 'utf-8');
-                });
-            }
-            else {
-                response.writeHead(500);
-                response.end(' error: ' + error.code + ' ..\n');
-                response.end();
-            }
-        }
-        else {
-            response.end(content, 'utf-8');
-        }
-    });
+  });
 })
 
 const options = {
@@ -82,13 +82,11 @@ let router
 let producerTransport
 let consumerTransport
 let producers = new Map()
+let producerFails = new Set();
 let consumers = []
 const peer = {};
-let rtpConsumer
 let webRTCTransport = []
-let rtpTransports = []
 let processWriteHLS = {};
-let streamTransport;
 let consumer;
 const mediaCodecs = [
   {
@@ -157,30 +155,10 @@ const createPlain = async () => {
 // Create Mediasoup Router
 router = createWorker()
 
-const getProducer = (channelSlug) => {
-  if (!producers.has(channelSlug) || producers.get(channelSlug).length==0) {
-    return null
-  }
-  return producers.get(channelSlug)[0].producer
-}
-
-// const getProducerList = () => {
-//   return producers
-//   let producersList = {}
-//   for ([key, value] in producers) {
-
-//     producersList[key] = {
-//       id: value.id,
-//       slug: value.slug
-//     }
-//   }
-//   return producersList
-// }
-
 peers.on('connection', async socket => {
 
   socket.on('disconnect', () => {
-    if(processWriteHLS[socket.id]) {
+    if (processWriteHLS[socket.id]) {
       processWriteHLS[socket.id].kill()
       delete processWriteHLS[socket.id]
     }
@@ -256,7 +234,7 @@ peers.on('connection', async socket => {
           rtpCapabilities,
           paused: true,
         })
-        
+
         const params = {
           id: consumer.id,
           producerId: producer.id,
@@ -274,17 +252,6 @@ peers.on('connection', async socket => {
         }
       })
     }
-  })
-
-  socket.on('closeAll', () => {
-    // if (producer) {
-    //   producer.close()
-    // }
-    // if (producerTransport) {
-    //   producerTransport.close()
-    // }
-    // socket.broadcast.emit('closeproduce');
-
   })
 
   // socket.on('consumer-resume', async () => {
@@ -310,107 +277,80 @@ peers.on('connection', async socket => {
       },
       appData: {},
     });
-    // const isPlay = producers.find(item => item.slug === data.slug) 
-    // const existsIndex = producers.findIndex(item => item.id === data.id);
-    // if (existsIndex !== -1) {
-    //     producers[existsIndex].producer = producer;
-    // } else {
-    //   producers.push({ channelName: data.channelName, slug: data.slug, id: data.id, producer });
-    // }
-    if (!producers.has(data.slug)) {
-      producers.set(data.slug, [])
-      // startRecord(producer, data.slug, socket.id)
-    }
-    producers.get(data.slug).push(
-      {
-        slug: data.slug,
-        id: data.id,
-        producer: producer
-      }
-    )
-    console.log('Producers', producers);
 
-
-
-    callback(streamTransport.tuple.localPort)
-    // if(!isPlay) {
-    //   startRecord(producer, data.slug, socket.id)
-    // } 
-  })
-
-  // socket.on('receive-producer-audio', async (data) => {
-  //   startRecord(peer, data)
-  // })
-  socket.on("link-stream", async (data) => {
-    const { producer, transport } = await direcLink(router, data)
-    // console.log('prod,tran',producer,transport);
-    
     if (!producers.has(data.channelName)) {
       producers.set(data.channelName, [])
+      // startRecord(producer, data.slug, socket.id)
     }
     producers.get(data.channelName).push(
       {
         slug: data.slug,
         id: data.id,
-        producer: producer
+        producer: producer,
+        active: true
       }
     )
     console.log('Producers', producers);
-  } )
-
-})
-
-
-// Periodically remove deleted Producer
-setInterval(async () => {
-  let countDelete = 0;
-  const promises = [];
-  const producerFails = [];
-  for (let [key, value] of producers) {
-    value.forEach(item => {
-      if (item.producer) {
-        promises.push(item.producer.getStats().then(stats => {
-          // console.log('stats',stats);
-          if (!stats ||stats[0]?.bitrate === 0) {
-            // console.log('close producer', item);
-
-            item.isDelete = true;
-            countDelete += 1;
-            producerFails.push(item.slug)
-            peers.to(item.slug).emit('reconnect');
-            if (consumerTransport && !consumerTransport.closed) {
-              consumerTransport.close();
-            }
-          }
-        }));
-      }
-    });
-
-  }
-
-
-  Promise.all(promises)
-  .then(() => {
-    if (countDelete > 0) {
-      // producers = producers.filter(producer => producer.isDelete !== true);
-
-      for (let [key, value] of producers) {
-        const newValue = value.filter(data => data.isDelete !== true);
-        producers.set(key, newValue);
-      }
-    }
-    if(producerFails.length > 0) {
-      producerFails.forEach(item => {
-        const data = getProducer(item)
-        if(data) {
-          // startRecord(data.producer, item, data.socketId)
-        }
-      })
-    }
+    callback(streamTransport.tuple.localPort)
+    // if(!isPlay) {
+    //   startRecord(producer, data.slug, socket.id)
+    // } 
+  })
+  // socket.on('receive-producer-audio', async (data) => {
+  //   startRecord(peer, data)
+  // })
   })
 
-}, 1000)
 
+  const listProducers = () => {
+    let result = {}
+    for (let [key, value] of producers) {
+      const prod_filter = value.map(item => {
+        return {
+          slug: item.slug,
+          id:item.id
+        }
+      })
+      // console.log('pair',value,prod_filter);
+      result[key] = prod_filter
+    }
+    return result
+
+  }
+  // Producer heart beat
+  setInterval(async () => {
+    let countDelete = 0;
+    const promises = [];
+
+    for (let [key, value] of producers) {
+      value.forEach(item => {
+        if (item.producer) {
+          promises.push(item.producer.getStats().then(stats => {            
+            if ( stats[0]?.bitrate === 0) {
+              item.active = false
+              // countDelete += 1;
+              // producerFails.push(item.slug)
+              peers.to(item.slug).emit('reconnect');
+              if (consumerTransport && !consumerTransport.closed) {
+                consumerTransport.close();
+              }
+            }
+          }));
+        }
+      });
+    }
+    Promise.all(promises)
+      .then(() => {
+        for (let [key, value] of producers) {
+          const new_value=value.filter(item=> item.active==true)
+          producers.set(key,new_value)
+        }
+        console.log("Producers heartbeat::", producers)
+        console.log('list',listProducers());
+        
+      })
+  }, 1000)
+ 
 
 const createWebRtcTransport = async (callback) => {
   try {

@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState ,useContext} from "react";
 import { useEffect ,useRef} from "react";
-import { useSocket } from "../context/SocketContext";
+import { SocketError } from "./SocketError";
+import { SocketContext } from "../context/SocketContext";
 import * as mediasoupClient from "mediasoup-client"
 export const Listen = () => {
-    const socket = useSocket();
+    const { socket } = useContext(SocketContext);
     const audioRef = useRef(null);
     const [ channelSlug, setChanelSlug ] = useState('')
     useEffect(() => {
@@ -12,6 +13,7 @@ export const Listen = () => {
                 console.log('Connected to socket server');
 
             });
+            socket.on("")
             // Cleanup on unmount
             return () => {
                 socket.off('connect');
@@ -126,24 +128,32 @@ export const Listen = () => {
     }, [])
     return (
         <>
-            <div className="p-3">
+            {
+                socket != null ? <>
+                    <div className="p-3">
+
+                        <div id="sharedBtns">
+                            <audio ref={audioRef} id="remoteVideo" autoPlay ></audio>
+                        </div>
+
+                        <div id="sharedBtns">
+                            <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onClick={() => goConsume('kenh1')}>Nghe kênh 1</button>
+                        </div>
+
+                        <div id="sharedBtns">
+                            <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onClick={() => goConsume('kenh2')}>Nghe kênh 2</button>
+                        </div>
+
+                        <div id="sharedBtns">
+                            <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onClick={() => goConsume('kenh3')}>Nghe kênh 3</button>
+                        </div>
+                    </div>
+                </> : <>
                 
-            <div id="sharedBtns">
-                    <audio ref={audioRef} id="remoteVideo" autoPlay ></audio>
-            </div>
-    
-            <div id="sharedBtns">
-                <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onClick={() => goConsume('kenh1')}>Nghe kênh 1</button>
-            </div>
-
-            <div id="sharedBtns">
-                <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onClick={() => goConsume('kenh2')}>Nghe kênh 2</button>
-            </div>
-
-            <div id="sharedBtns">
-                <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onClick={() => goConsume('kenh3')}>Nghe kênh 3</button>
-            </div>
-           </div>
+                    <SocketError/>
+                    </>
+             }
+          
         </>
     )
 }

@@ -6,8 +6,8 @@ export const VerticalNav = () => {
     }
     return (
         <>
-            <div className="min-h-screen flex items-center justify-center bg-gray-100 ">
-                <div className="flex w-full max-w-xs p-4 bg-white">
+            <div className="min-h-screen flex items-start justify-center bg-gray-100 ">
+                <div className="flex min-h-screen w-full max-w-xs p-4 bg-white">
                     <ul className="flex flex-col w-full">
                         <li className="my-px">
                             <a href="#"
@@ -98,7 +98,7 @@ export const VerticalNav = () => {
                                 <span className="ml-3">Add new</span>
                             </a>
                         </li>
-                        <li className="my-px">
+                        {/* <li className="my-px">
                             <span className="flex font-medium text-sm text-gray-400 px-4 my-4 uppercase">Account</span>
                         </li>
                         <li className="my-px">
@@ -170,7 +170,7 @@ export const VerticalNav = () => {
                                 </span>
                                 <span className="ml-3">Logout</span>
                             </a>
-                        </li>
+                        </li> */}
                     </ul>
                 </div>
             </div>

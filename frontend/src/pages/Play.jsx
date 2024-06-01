@@ -1,9 +1,9 @@
 import React from "react";
-import { useEffect, useRef } from "react";
-import { useSocket } from "../context/SocketContext";
+import { useEffect, useRef ,useContext} from "react";
 import * as mediasoupClient from "mediasoup-client"
+import { SocketContext} from "../context/SocketContext";
 export const Play = () => {
-    const socket = useSocket();
+    const { socket } = useContext(SocketContext);
     const msgSpan=useRef(null)
     useEffect(() => {
         if (socket) {

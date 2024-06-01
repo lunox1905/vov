@@ -20,9 +20,10 @@ function App() {
     createRoutesFromElements(
 
       <Route path='/' element={<Layout />}>
-        <Route index element={<Home />} />
-        <Route path="/play" element={<Play />} />
-        <Route path='/listen' element={<Listen/>} />
+        <Route path="" element={<Home />}>
+          <Route path="play" element={<Play />} />
+          <Route path='listen' element={<Listen />} />
+        </Route>
       </Route>
     )
   )
@@ -30,11 +31,11 @@ function App() {
   return (
     <SocketProvider>
 
-    <div>
-      <ToastContainer />
-      <RouterProvider router={router} />
+      <div>
+        <ToastContainer />
+        <RouterProvider router={router} />
 
-    </div>
+      </div>
     </SocketProvider>
   );
 }
