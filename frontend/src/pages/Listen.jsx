@@ -1,10 +1,18 @@
+<<<<<<< HEAD
 import React from "react";
+=======
+import { useState } from "react";
+>>>>>>> 83c7254c0600241b57b00301b97ab00c59b8d03c
 import { useEffect ,useRef} from "react";
 import { useSocket } from "../context/SocketContext";
 import * as mediasoupClient from "mediasoup-client"
 export const Listen = () => {
     const socket = useSocket();
     const audioRef = useRef(null);
+<<<<<<< HEAD
+=======
+    const [ channelSlug, setChanelSlug ] = useState('')
+>>>>>>> 83c7254c0600241b57b00301b97ab00c59b8d03c
     useEffect(() => {
         if (socket) {
             socket.on('connect', () => {
@@ -31,7 +39,12 @@ export const Listen = () => {
     //     video.src = ''
     // })
 
+<<<<<<< HEAD
     const goConsume = () => {
+=======
+    const goConsume = (channelSlug) => {
+        setChanelSlug(channelSlug)
+>>>>>>> 83c7254c0600241b57b00301b97ab00c59b8d03c
         device === undefined ? getRtpCapabilities() : createRecvTransport()
     }
     const getRtpCapabilities = () => {
@@ -70,10 +83,18 @@ export const Listen = () => {
                 console.log(params.error)
                 return
             }
+<<<<<<< HEAD
+=======
+            console.log('1111111111111===')
+>>>>>>> 83c7254c0600241b57b00301b97ab00c59b8d03c
             consumerTransport = device.createRecvTransport(params)
 
             consumerTransport.on('connect', async ({ dtlsParameters }, callback, errback) => {
                 try {
+<<<<<<< HEAD
+=======
+                    console.log('1222222===')
+>>>>>>> 83c7254c0600241b57b00301b97ab00c59b8d03c
                     await socket.emit('transport-recv-connect', {
                         dtlsParameters,
                     })
@@ -92,7 +113,11 @@ export const Listen = () => {
         console.log('stage4');
         await socket.emit('consume', {
             rtpCapabilities: device.rtpCapabilities,
+<<<<<<< HEAD
             channelSlug:"slug"
+=======
+            channelSlug: channelSlug
+>>>>>>> 83c7254c0600241b57b00301b97ab00c59b8d03c
         }, async ({ params }) => {
 
             if (params.error) {
@@ -107,6 +132,7 @@ export const Listen = () => {
                 rtpParameters: params.rtpParameters
             })
             const { track } = consumer
+<<<<<<< HEAD
             console.log("tracks", track);
 
             // let stream = new MediaStream([track])
@@ -132,4 +158,40 @@ export const Listen = () => {
            </div>
         </>
 )
+=======
+            let audiostream = new MediaStream([track])
+            
+            audioRef.current.srcObject = audiostream
+        })
+    }
+
+    useEffect(() => {
+        socket.on('reconnect', async () => {
+            createRecvTransport()
+        })
+    }, [])
+
+    return (
+        <>
+            <div className="p-3">
+                
+            <div id="sharedBtns">
+                    <audio ref={audioRef} id="remoteVideo" autoPlay ></audio>
+            </div>
+    
+            <div id="sharedBtns">
+                <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onClick={() => goConsume('kenh1')}>Nghe kênh 1</button>
+            </div>
+
+            <div id="sharedBtns">
+                <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onClick={() => goConsume('kenh2')}>Nghe kênh 2</button>
+            </div>
+
+            <div id="sharedBtns">
+                <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onClick={() => goConsume('kenh3')}>Nghe kênh 3</button>
+            </div>
+           </div>
+        </>
+    )
+>>>>>>> 83c7254c0600241b57b00301b97ab00c59b8d03c
 }

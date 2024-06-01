@@ -145,10 +145,11 @@ module.exports = class FFmpeg {
   }
   get _hlsArgs() {
     return [
-      '-hls_time', '5',           // Segment duration in seconds
-      '-hls_list_size', '100',       // Maximum number of playlist entries
-      '-start_number', '1',        // Start number for the segment filenames
-      '-f', 'hls',                 // Output format HLS
+      '-hls_time', '1',           
+      '-hls_list_size', '5',       
+      '-start_number', '1',       
+      '-f', 'hls',    
+      '-hls_flags', 'delete_segments'            
     ];
   }
 }
