@@ -118,11 +118,12 @@ export const Listen = () => {
     }
 
     useEffect(() => {
-        socket.on('reconnect', async () => {
-            createRecvTransport()
-        })
+        if (socket) {
+            socket.on('reconnect', async () => {
+                createRecvTransport()
+            })
+        }
     }, [])
-
     return (
         <>
             <div className="p-3">

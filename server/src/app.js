@@ -16,8 +16,6 @@ const {
 const { ppid } = require('process');
 
 app.use(cors("*"))
-<<<<<<< HEAD
-=======
 app.use('/play', express.static('../client/public'))
 app.use('/webplay', express.static('../webclient/src'))
 
@@ -56,7 +54,6 @@ app.use('/playhls', (request, response) => {
     });
 })
 
->>>>>>> 83c7254c0600241b57b00301b97ab00c59b8d03c
 const options = {
   key: fs.readFileSync('./ssl/key.pem', 'utf-8'),
   cert: fs.readFileSync('./ssl/cert.pem', 'utf-8')
@@ -161,31 +158,10 @@ const createPlain = async () => {
 router = createWorker()
 
 const getProducer = (channelSlug) => {
-<<<<<<< HEAD
-  console.log("producers", producers)
-  if (!producers.has(channelSlug) || producers.has(channelSlug).length==0) {
-    return null
-  }
-  return producers.get(channelSlug)[0].producer
-}
-
-const getProducerList = () => {
-  return producers
-  let producersList = {}
-  for ([key, value] in producers) {
-
-    producersList[key] = {
-      id: value.id,
-      slug: value.slug
-    }
-  }
-  return producersList
-=======
   if (!producers.has(channelSlug) || producers.get(channelSlug).length==0) {
     return null
   }
   return producers.get(channelSlug)[0].producer
->>>>>>> 83c7254c0600241b57b00301b97ab00c59b8d03c
 }
 
 // const getProducerList = () => {
@@ -244,18 +220,6 @@ peers.on('connection', async socket => {
           id: socket.id
         })
       }
-<<<<<<< HEAD
-
-    }
-  })
-
-  socket.on('record', async () => {
-    startRecord(peer)
-  })
-
-  socket.on('transport-recv-connect', async ({ dtlsParameters }) => {
-    console.log(socket.id)
-=======
     }
   })
 
@@ -265,7 +229,6 @@ peers.on('connection', async socket => {
 
   socket.on('transport-recv-connect', async ({ dtlsParameters }) => {
     console.log("=====================================::")
->>>>>>> 83c7254c0600241b57b00301b97ab00c59b8d03c
     const consumerTransport = webRTCTransport.find(item => item.id == socket.id).consumerTransport
     await consumerTransport.connect({ dtlsParameters })
   })
@@ -275,19 +238,10 @@ peers.on('connection', async socket => {
       if (!channelSlug) {
         throw new Error(`Invalid channel:${channelSlug}`)
       }
-<<<<<<< HEAD
-      console.log("SID::", socket.id)
-      socket.join(channelSlug);
-      const producer = null
-      if (producers.get(channelSlug) && producers.get(channelSlug).length > 0) {
-
-        producer = producers.get(channelSlug)[0]
-=======
       socket.join(channelSlug);
       let producer;
       if (producers.get(channelSlug) && producers.get(channelSlug).length > 0) {
         producer = producers.get(channelSlug)[0].producer;
->>>>>>> 83c7254c0600241b57b00301b97ab00c59b8d03c
       }
       if (!producer) {
         throw new Error(`Cannot find producer for channel ${channelSlug}`)
@@ -356,10 +310,7 @@ peers.on('connection', async socket => {
       },
       appData: {},
     });
-<<<<<<< HEAD
-=======
     // const isPlay = producers.find(item => item.slug === data.slug) 
->>>>>>> 83c7254c0600241b57b00301b97ab00c59b8d03c
     // const existsIndex = producers.findIndex(item => item.id === data.id);
     // if (existsIndex !== -1) {
     //     producers[existsIndex].producer = producer;
