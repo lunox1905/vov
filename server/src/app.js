@@ -9,7 +9,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 const app = express();
 const config = require('./config');
 const FFmpeg = require('./ffmpeg');
-const direcLink= require('./directLink')
+const direcLink = require('./directLink')
 const {
   getPort,
 } = require('./port');
@@ -82,13 +82,11 @@ let router
 let producerTransport
 let consumerTransport
 let producers = new Map()
+let producerFails = new Set();
 let consumers = []
 const peer = {};
-let rtpConsumer
 let webRTCTransport = []
-let rtpTransports = []
 let processWriteHLS = {};
-let streamTransport;
 let consumer;
 const mediaCodecs = [
   {
@@ -180,7 +178,7 @@ const getProducer = (channelSlug) => {
 peers.on('connection', async socket => {
 
   socket.on('disconnect', () => {
-    if(processWriteHLS[socket.id]) {
+    if (processWriteHLS[socket.id]) {
       processWriteHLS[socket.id].kill()
       delete processWriteHLS[socket.id]
     }
@@ -256,7 +254,7 @@ peers.on('connection', async socket => {
           rtpCapabilities,
           paused: true,
         })
-        
+
         const params = {
           id: consumer.id,
           producerId: producer.id,
@@ -273,17 +271,6 @@ peers.on('connection', async socket => {
         }
       })
     }
-  })
-
-  socket.on('closeAll', () => {
-    // if (producer) {
-    //   producer.close()
-    // }
-    // if (producerTransport) {
-    //   producerTransport.close()
-    // }
-    // socket.broadcast.emit('closeproduce');
-
   })
 
   // socket.on('consumer-resume', async () => {
@@ -342,12 +329,14 @@ peers.on('connection', async socket => {
     
     if (!producers.has(data.channelName)) {
       producers.set(data.channelName, [])
+      // startRecord(producer, data.slug, socket.id)
     }
     producers.get(data.channelName).push(
       {
         slug: data.slug,
         id: data.id,
-        producer: producer
+        producer: producer,
+        active: true
       }
     )
     console.log('Producers', producers);
@@ -395,15 +384,15 @@ setInterval(async () => {
     if(producerFails.length > 0) {
       producerFails.forEach(item => {
         const data = getProducer(item)
+        console.log(data)
         if(data) {
           startRecord(data.producer, item, data.socketId)
         }
       })
     }
   })
-
-}, 1000)
-
+  }, 1000)
+ 
 
 const createWebRtcTransport = async (callback) => {
   try {

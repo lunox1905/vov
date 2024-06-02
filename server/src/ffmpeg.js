@@ -7,7 +7,7 @@ const Logger = require('./logger.js')
 const fs = require('fs');
 // console.log('path', path.resolve('../files'));
 const RECORD_FILE_LOCATION_PATH = process.env.RECORD_FILE_LOCATION_PATH || path.resolve('../server/files');
-console.log("Save path::", RECORD_FILE_LOCATION_PATH)
+
 const myOS = getOS()
 module.exports = class FFmpeg {
   constructor(options) {

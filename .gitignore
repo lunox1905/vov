@@ -10,8 +10,8 @@ logs/*
 
 # keys 
 ssl/*
-files/mp3/*
-files/hls/*
+*files/mp3/*
+*files/hls/*
 **/bundle.js
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json

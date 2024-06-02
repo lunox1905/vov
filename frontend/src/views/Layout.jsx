@@ -1,10 +1,11 @@
 import React from 'react';
 import { Outlet, Link } from 'react-router-dom';
-import { VerticalNav } from '../components/VerticalNav';
+
+import { HorizontalNav } from '../components/HorizontalNav';
 function Layout() {
     return (
-        <div className='flex'>
-            <VerticalNav/>
+        <div >
+            <HorizontalNav />
             <Outlet />
         </div>
     );
