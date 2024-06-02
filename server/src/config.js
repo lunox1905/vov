@@ -53,14 +53,14 @@ module.exports = Object.freeze({
     ]
   },
   webRtcTransport: {
-    listenIps: [{ ip: '0.0.0.0', announcedIp: HOST_IP }],
+    listenIps: [ { ip: '0.0.0.0', announcedIp: HOST_IP } ], 
     enableUdp: true,
     enableTcp: true,
     preferUdp: true,
     maxIncomingBitrate: 1500000
   },
   plainRtpTransport: {
-    listenIp: { ip: '0.0.0.0', announcedIp: HOST_IP },
+    listenIp: { ip: '0.0.0.0', announcedIp: HOST_IP }, 
     rtcpMux: false,
     comedia: false
   }
