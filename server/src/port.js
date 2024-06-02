@@ -7,7 +7,7 @@ const takenPortSet = new Set();
 const getPort = async () => {
   let port = getRandomPort();
 
-  while (takenPortSet.has(port)) {
+  while(takenPortSet.has(port)) {
     port = getRandomPort();
   }
 

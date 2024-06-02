@@ -1,8 +1,8 @@
 const { Readable } = require('stream');
-const os = require('os');
+
 module.exports.convertStringToStream = (stringToConvert) => {
   const stream = new Readable();
-  stream._read = () => { };
+  stream._read = () => {};
   stream.push(stringToConvert);
   stream.push(null);
 
@@ -17,17 +17,3 @@ module.exports.getCodecInfoFromRtpParameters = (kind, rtpParameters) => {
     channels: kind === 'audio' ? rtpParameters.codecs[0].channels : undefined
   };
 };
-
-module.exports.getOS=()=> {
-  const platform = os.platform();
-
-  if (platform === 'win32') {
-    return 'Windows';
-  } else if (platform === 'linux') {
-    return 'Linux';
-  } else {
-    return 'Unknown';
-  }
-}
-
-

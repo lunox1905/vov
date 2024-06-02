@@ -4,10 +4,10 @@
   "description": "",
   "main": "app.js",
   "scripts": {
-    "start": "nodemon ./src/app.js",
+    "start": "nodemon src/app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "thaichinh&&ducnguyen",
+  "author": "thaichinh",
   "license": "ISC",
   "dependencies": {
     "cors": "^2.8.5",
@@ -16,8 +16,7 @@
     "httpolyglot": "^0.1.2",
     "mediasoup": "^3.14.1",
     "mediasoup-client": "^3.7.7",
-    "socket.io": "^4.7.5",
-    "tree-kill": "^1.2.2",
-    "winston": "^3.13.0"
+    "mediasoup-sdp-bridge": "https://github.com/OpenVidu/mediasoup-sdp-bridge/tarball/v3",
+    "socket.io": "^4.7.5"
   }
 }
