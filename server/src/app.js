@@ -152,7 +152,6 @@ const createPlain = async () => {
 
   return streamTransport;
 }
-// Create Mediasoup Router
 router = createWorker()
 
 const getProducer = (channelSlug) => {
@@ -320,9 +319,6 @@ peers.on('connection', async socket => {
     callback(streamTransport.tuple.localPort)
   })
 
-  // socket.on('receive-producer-audio', async (data) => {
-  //   startRecord(peer, data)
-  // })
   socket.on("link-stream", async (data) => {
     const { producer, transport } = await direcLink(router, data)
     // console.log('prod,tran',producer,transport);
@@ -345,7 +341,6 @@ peers.on('connection', async socket => {
 })
 
 
-// Periodically remove deleted Producer
 setInterval(async () => {
   let countDelete = 0;
   const promises = [];
@@ -354,10 +349,7 @@ setInterval(async () => {
     value.forEach(item => {
       if (item.producer) {
         promises.push(item.producer.getStats().then(stats => {
-          // console.log('stats',stats);
           if (!stats ||stats[0]?.bitrate === 0) {
-            // console.log('close producer', item);
-
             item.isDelete = true;
             countDelete += 1;
             producerFails.push(item.slug)
