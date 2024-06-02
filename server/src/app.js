@@ -21,37 +21,37 @@ app.use('/webplay', express.static('../webclient/src'))
 
 app.use('/playhls', (request, response) => {
   const url = request.url.substring(request.url.lastIndexOf('/') + 1);
-    const base = path.basename(url, path.extname(url))
-    const extractBase = base.substring(0, base.indexOf('-hls') + 4);
-    let filePath = ""
-    var filePathOption1 = path.resolve(`../files/hls/${base}/${url}`);
-    var filePathOption2 = path.resolve(`../files/hls/${extractBase}/${url}`)
+  const base = path.basename(url, path.extname(url))
+  const extractBase = base.substring(0, base.indexOf('-hls') + 4);
+  let filePath = ""
+  var filePathOption1 = path.resolve(`../server/files/hls/${base}/${url}`);
+  var filePathOption2 = path.resolve(`../server/files/hls/${extractBase}/${url}`)
 
-    if (fs.existsSync(filePathOption1)) {
-        filePath = filePathOption1
-    }
-    else {
-        filePath = filePathOption2
-    }
+  if (fs.existsSync(filePathOption1)) {
+      filePath = filePathOption1
+  }
+  else {
+      filePath = filePathOption2
+  }
 
-    fs.readFile(filePath, function (error, content) {
-        response.writeHead(200, { 'Access-Control-Allow-Origin': '*' });
-        if (error) {
-            if (error.code == 'ENOENT') {
-                fs.readFile('./404.html', function (error, content) {
-                    response.end(content, 'utf-8');
-                });
-            }
-            else {
-                response.writeHead(500);
-                response.end(' error: ' + error.code + ' ..\n');
-                response.end();
-            }
-        }
-        else {
-            response.end(content, 'utf-8');
-        }
-    });
+  fs.readFile(filePath, function (error, content) {
+      response.writeHead(200, { 'Access-Control-Allow-Origin': '*' });
+      if (error) {
+          if (error.code == 'ENOENT') {
+              fs.readFile('./404.html', function (error, content) {
+                  response.end(content, 'utf-8');
+              });
+          }
+          else {
+              response.writeHead(500);
+              response.end(' error: ' + error.code + ' ..\n');
+              response.end();
+          }
+      }
+      else {
+          response.end(content, 'utf-8');
+      }
+  });
 })
 
 const options = {
@@ -161,7 +161,7 @@ const getProducer = (channelSlug) => {
   if (!producers.has(channelSlug) || producers.get(channelSlug).length==0) {
     return null
   }
-  return producers.get(channelSlug)[0].producer
+  return producers.get(channelSlug)[0]
 }
 
 // const getProducerList = () => {
@@ -267,7 +267,6 @@ peers.on('connection', async socket => {
         callback({ params })
       }
     } catch (error) {
-      console.log(error.message)
       callback({
         params: {
           error: error
@@ -319,7 +318,9 @@ peers.on('connection', async socket => {
     // }
     if (!producers.has(data.slug)) {
       producers.set(data.slug, [])
-      // startRecord(producer, data.slug, socket.id)
+    }
+    if(!producers.has(data.slug) || producers.get(data.slug).length === 0) {
+      startRecord(producer, data.slug, socket.id)
     }
     producers.get(data.slug).push(
       {
@@ -329,13 +330,7 @@ peers.on('connection', async socket => {
       }
     )
     console.log('Producers', producers);
-
-
-
     callback(streamTransport.tuple.localPort)
-    // if(!isPlay) {
-    //   startRecord(producer, data.slug, socket.id)
-    // } 
   })
 
   // socket.on('receive-producer-audio', async (data) => {
@@ -392,8 +387,6 @@ setInterval(async () => {
   Promise.all(promises)
   .then(() => {
     if (countDelete > 0) {
-      // producers = producers.filter(producer => producer.isDelete !== true);
-
       for (let [key, value] of producers) {
         const newValue = value.filter(data => data.isDelete !== true);
         producers.set(key, newValue);
@@ -403,7 +396,7 @@ setInterval(async () => {
       producerFails.forEach(item => {
         const data = getProducer(item)
         if(data) {
-          // startRecord(data.producer, item, data.socketId)
+          startRecord(data.producer, item, data.socketId)
         }
       })
     }

@@ -2,6 +2,11 @@ import { useState } from "react";
 import { useEffect ,useRef} from "react";
 import { useSocket } from "../context/SocketContext";
 import * as mediasoupClient from "mediasoup-client"
+
+let device
+let rtpCapabilities
+let consumerTransport
+let consumer
 export const Listen = () => {
     const socket = useSocket();
     const audioRef = useRef(null);
@@ -10,8 +15,8 @@ export const Listen = () => {
         if (socket) {
             socket.on('connect', () => {
                 console.log('Connected to socket server');
-
             });
+
             // Cleanup on unmount
             return () => {
                 socket.off('connect');
@@ -20,20 +25,13 @@ export const Listen = () => {
         }
     }, [socket]);
 
-
-    let device
-    let rtpCapabilities
-    let consumerTransport
-    let consumer
-
     // socket.on("closeproduce", () => {
     //     const video = document.getElementById("remoteVideo")
     //     // mediaRecorder.stop()
     //     video.src = ''
     // })
 
-    const goConsume = (channelSlug) => {
-        setChanelSlug(channelSlug)
+    const goConsume = () => {
         device === undefined ? getRtpCapabilities() : createRecvTransport()
     }
     const getRtpCapabilities = () => {
@@ -72,12 +70,10 @@ export const Listen = () => {
                 console.log(params.error)
                 return
             }
-            console.log('1111111111111===')
             consumerTransport = device.createRecvTransport(params)
 
             consumerTransport.on('connect', async ({ dtlsParameters }, callback, errback) => {
                 try {
-                    console.log('1222222===')
                     await socket.emit('transport-recv-connect', {
                         dtlsParameters,
                     })
@@ -101,6 +97,7 @@ export const Listen = () => {
 
             if (params.error) {
                 console.log('error', params.error);
+                setChanelSlug('')
                 return
             }
 
@@ -112,16 +109,19 @@ export const Listen = () => {
             })
             const { track } = consumer
             let audiostream = new MediaStream([track])
-            
             audioRef.current.srcObject = audiostream
         })
     }
 
     useEffect(() => {
-        socket.on('reconnect', async () => {
-            createRecvTransport()
-        })
-    }, [])
+        if(channelSlug) {
+            goConsume()
+            socket.on('reconnect', async () => {
+                createRecvTransport()
+            })
+        }
+        
+    }, [channelSlug])
 
     return (
         <>
@@ -132,15 +132,15 @@ export const Listen = () => {
             </div>
     
             <div id="sharedBtns">
-                <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onClick={() => goConsume('kenh1')}>Nghe kênh 1</button>
+                <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onClick={() => setChanelSlug('kenh1')}>Nghe kênh 1</button>
             </div>
 
             <div id="sharedBtns">
-                <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onClick={() => goConsume('kenh2')}>Nghe kênh 2</button>
+                <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onClick={() => setChanelSlug('kenh2')}>Nghe kênh 2</button>
             </div>
 
             <div id="sharedBtns">
-                <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onClick={() => goConsume('kenh3')}>Nghe kênh 3</button>
+                <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onClick={() => setChanelSlug('kenh3')}>Nghe kênh 3</button>
             </div>
            </div>
         </>

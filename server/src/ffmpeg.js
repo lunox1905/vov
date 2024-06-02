@@ -6,7 +6,7 @@ const path = require("path")
 const Logger = require('./logger.js')
 const fs = require('fs');
 // console.log('path', path.resolve('../files'));
-const RECORD_FILE_LOCATION_PATH = process.env.RECORD_FILE_LOCATION_PATH || path.resolve('../files');
+const RECORD_FILE_LOCATION_PATH = process.env.RECORD_FILE_LOCATION_PATH || path.resolve('../server/files');
 console.log("Save path::", RECORD_FILE_LOCATION_PATH)
 const myOS = getOS()
 module.exports = class FFmpeg {
@@ -31,7 +31,6 @@ module.exports = class FFmpeg {
     const sdpStream = convertStringToStream(sdpString);
 
     console.log('createProcess() [sdpString:%s]', sdpString);
-
     this._process = child_process.spawn('ffmpeg', this._commandArgs);
 
     if (this._process.stderr) {
@@ -149,7 +148,7 @@ module.exports = class FFmpeg {
       '-hls_list_size', '5',       
       '-start_number', '1',       
       '-f', 'hls',    
-      '-hls_flags', 'delete_segments'            
+      '-hls_flags', 'delete_segments+append_list'           
     ];
   }
 }
